@@ -287,19 +287,24 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         config.get("default_provider", "anthropic")
     )
     provider_label = PROVIDERS.get(current, {}).get("label", current)
+    cwd = config.get("cwd", "(not set)")
     await update.message.reply_text(
         "👋 *personal-skills bot*\n\n"
-        "Send me:\n"
-        "• A Slack thread URL → summarize or answer it\n"
-        "• A YouTube/Medium URL → summarize it\n"
-        "• A Jira issue key → summarize it\n"
-        "• Any question about your codebase\n\n"
-        f"Current AI provider: *{provider_label}*\n\n"
-        "Commands:\n"
+        f"Provider: *{provider_label}* · Codebase: `{cwd}`\n\n"
+        "*ps: skills*\n"
+        "`/slack_summary <url>` — summarize Slack thread\n"
+        "`/slack_answer <url>` — research + draft reply\n"
+        "`/tube_summary <url>` — summarize YouTube video\n"
+        "`/medium_summary <url>` — summarize Medium article\n"
+        "`/jira_summary <KEY>` — summarize Jira issue\n"
+        "`/jira_plantask <KEY>` — plan + break into subtasks\n"
+        "`/excalidraw <desc>` — generate diagram\n"
+        "`/web` — launch history web UI\n\n"
+        "*Settings*\n"
         "`/provider` — switch AI provider\n"
         "`/cwd /path/to/repo` — set codebase directory\n"
-        "`/clear` — reset conversation\n"
-        "`/help` — show this message",
+        "`/clear` — reset conversation\n\n"
+        "Or just send any message to chat freely.",
         parse_mode="Markdown"
     )
 
@@ -371,6 +376,95 @@ async def cwd_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     config["cwd"] = str(path)
     save_config(config)
     await update.message.reply_text(f"✓ Codebase directory set to:\n`{path}`", parse_mode="Markdown")
+
+
+# ---------------------------------------------------------------------------
+# ps: skill handlers — each maps to a direct prompt to Claude
+# ---------------------------------------------------------------------------
+
+PS_COMMANDS = {
+    "slack_summary": {
+        "cmd":   "slack_summary",
+        "usage": "/slack_summary <slack-thread-url>",
+        "desc":  "Summarize a Slack thread",
+        "prompt": "Summarize this Slack thread: {args}",
+    },
+    "slack_answer": {
+        "cmd":   "slack_answer",
+        "usage": "/slack_answer <slack-thread-url>",
+        "desc":  "Research codebase and draft a reply to a Slack thread",
+        "prompt": "Answer this Slack thread by researching the codebase: {args}",
+    },
+    "tube_summary": {
+        "cmd":   "tube_summary",
+        "usage": "/tube_summary <youtube-url>",
+        "desc":  "Summarize a YouTube video",
+        "prompt": "Summarize this YouTube video: {args}",
+    },
+    "medium_summary": {
+        "cmd":   "medium_summary",
+        "usage": "/medium_summary <medium-url>",
+        "desc":  "Summarize a Medium article",
+        "prompt": "Summarize this Medium article: {args}",
+    },
+    "jira_summary": {
+        "cmd":   "jira_summary",
+        "usage": "/jira_summary <PROJ-123 or jira-url>",
+        "desc":  "Summarize a Jira issue",
+        "prompt": "Summarize this Jira issue: {args}",
+    },
+    "jira_plantask": {
+        "cmd":   "jira_plantask",
+        "usage": "/jira_plantask <PROJ-123>",
+        "desc":  "Plan and break a Jira issue into subtasks",
+        "prompt": "Plan and break this Jira issue into implementation subtasks: {args}",
+    },
+    "excalidraw": {
+        "cmd":   "excalidraw",
+        "usage": "/excalidraw <description>",
+        "desc":  "Generate an Excalidraw diagram from a description",
+        "prompt": "Generate an Excalidraw diagram for: {args}",
+    },
+    "web": {
+        "cmd":   "web",
+        "usage": "/web",
+        "desc":  "Launch the personal-skills history web UI",
+        "prompt": "Launch the personal-skills web UI history server",
+    },
+}
+
+
+def make_ps_handler(skill: dict):
+    async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        args_text = " ".join(context.args).strip() if context.args else ""
+        config    = context.bot_data.get("config", {})
+        chat_id   = update.effective_chat.id
+
+        if not args_text and skill["cmd"] != "web":
+            await update.message.reply_text(
+                f"Usage: `{skill['usage']}`",
+                parse_mode="Markdown"
+            )
+            return
+
+        prompt = skill["prompt"].format(args=args_text)
+        await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+
+        try:
+            reply = await ask_ai(chat_id, prompt, config)
+        except Exception as e:
+            tb = traceback.format_exc()
+            logger.error(f"AI error: {tb}")
+            reply = f"❌ Error: {e}\n\n```\n{tb[-800:]}\n```"
+
+        if len(reply) <= 4096:
+            await update.message.reply_text(reply)
+        else:
+            for chunk in [reply[i:i+4000] for i in range(0, len(reply), 4000)]:
+                await update.message.reply_text(chunk)
+                await asyncio.sleep(0.3)
+
+    return handler
 
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -488,8 +582,36 @@ def main():
     app.add_handler(CommandHandler("clear",    clear_handler,    filters=user_filter))
     app.add_handler(CommandHandler("provider", provider_handler, filters=user_filter))
     app.add_handler(CommandHandler("cwd",      cwd_handler,      filters=user_filter))
+
+    # Register all ps: skill commands
+    for skill in PS_COMMANDS.values():
+        app.add_handler(CommandHandler(skill["cmd"], make_ps_handler(skill), filters=user_filter))
+
     app.add_handler(CallbackQueryHandler(provider_callback, pattern="^provider:"))
     app.add_handler(MessageHandler(filters.TEXT & user_filter, message_handler))
+
+    # Register command list with BotFather so they show in autocomplete
+    async def set_bot_commands(app):
+        from telegram import BotCommand
+        commands = [
+            BotCommand("start",          "Show welcome message"),
+            BotCommand("help",           "Show help"),
+            BotCommand("clear",          "Reset conversation history"),
+            BotCommand("provider",       "Switch AI provider (MiniMax/ZAI/Anthropic)"),
+            BotCommand("cwd",            "Set codebase directory for code lookups"),
+            BotCommand("slack_summary",  "Summarize a Slack thread"),
+            BotCommand("slack_answer",   "Research codebase and draft Slack reply"),
+            BotCommand("tube_summary",   "Summarize a YouTube video"),
+            BotCommand("medium_summary", "Summarize a Medium article"),
+            BotCommand("jira_summary",   "Summarize a Jira issue"),
+            BotCommand("jira_plantask",  "Plan & break a Jira issue into subtasks"),
+            BotCommand("excalidraw",     "Generate an Excalidraw diagram"),
+            BotCommand("web",            "Launch history web UI"),
+        ]
+        await app.bot.set_my_commands(commands)
+        logger.info(f"Registered {len(commands)} bot commands with BotFather")
+
+    app.post_init = set_bot_commands
 
     logger.info("Bot is running. Press Ctrl+C to stop.")
     app.run_polling(drop_pending_updates=True)
