@@ -80,7 +80,7 @@ python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
 If `ok`: generate a participant interaction diagram — each participant as a node, arrows showing who replied to whom (based on thread flow), topic as a title box at the top. Write to `/tmp/slack_diagram.excalidraw`, then:
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/excalidraw/render_excalidraw.py" \
+python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
   /tmp/slack_diagram.excalidraw --output /tmp/slack_diagram.png 2>/dev/null
 ```
 

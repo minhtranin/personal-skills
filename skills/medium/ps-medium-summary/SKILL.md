@@ -77,7 +77,7 @@ python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
 If `ok`: generate a concept map — article title as central box, key points as connected leaf nodes grouped by theme. Write to `/tmp/medium_diagram.excalidraw`, then:
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/excalidraw/render_excalidraw.py" \
+python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
   /tmp/medium_diagram.excalidraw --output /tmp/medium_diagram.png 2>/dev/null
 ```
 

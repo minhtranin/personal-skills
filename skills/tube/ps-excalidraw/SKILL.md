@@ -14,14 +14,14 @@ The user wants to create a diagram.
 ## Step 0 — Bootstrap if missing
 
 ```bash
-ls "$HOME/.local/share/personal-skills/scripts/excalidraw/render_excalidraw.py" 2>/dev/null || \
+ls "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" 2>/dev/null || \
   curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/install.sh | bash
 ```
 
 ## Step 1 — Ensure dependencies
 
 ```bash
-bash "$HOME/.local/share/personal-skills/scripts/excalidraw/setup.sh"
+bash "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/setup.sh"
 ```
 
 If exit non-zero, show error and stop.
@@ -103,7 +103,7 @@ EXCALIDRAW_EOF
 ## Step 3 — Render to PNG
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/excalidraw/render_excalidraw.py" \
+python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
   /tmp/diagram.excalidraw --output /tmp/diagram.png
 ```
 
