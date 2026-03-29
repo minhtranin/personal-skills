@@ -246,7 +246,7 @@ def all_items():
 
 
 def safe_key(key: str) -> str:
-    if not all(c.isalnum() or c in "-_" for c in key):
+    if not all(c.isalnum() or c in "-_." for c in key):
         abort(400)
     return key
 
