@@ -553,7 +553,9 @@ def make_ps_handler(skill: dict):
             return
 
         prompt = skill["prompt"].format(args=args_text)
-        await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+
+        stop_typing = asyncio.Event()
+        typing_task = asyncio.create_task(keep_typing(context.bot, chat_id, stop_typing))
 
         try:
             reply = await ask_ai(chat_id, prompt, config)
@@ -561,6 +563,9 @@ def make_ps_handler(skill: dict):
             tb = traceback.format_exc()
             logger.error(f"AI error: {tb}")
             reply = f"❌ Error: {e}\n\n```\n{tb[-800:]}\n```"
+        finally:
+            stop_typing.set()
+            typing_task.cancel()
 
         if len(reply) <= 4096:
             await update.message.reply_text(reply)
@@ -572,6 +577,16 @@ def make_ps_handler(skill: dict):
     return handler
 
 
+async def keep_typing(bot, chat_id: int, stop_event: asyncio.Event):
+    """Re-send typing indicator every 4s until stop_event is set."""
+    while not stop_event.is_set():
+        try:
+            await bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+        except Exception:
+            pass
+        await asyncio.sleep(4)
+
+
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id   = update.effective_chat.id
     user_text = update.message.text.strip()
@@ -580,7 +595,9 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not user_text:
         return
 
-    await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
+    # Start persistent typing indicator
+    stop_typing = asyncio.Event()
+    typing_task = asyncio.create_task(keep_typing(context.bot, chat_id, stop_typing))
 
     try:
         reply = await ask_ai(chat_id, user_text, config)
@@ -588,6 +605,9 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         tb = traceback.format_exc()
         logger.error(f"AI error: {tb}")
         reply = f"❌ Error: {e}\n\n```\n{tb[-800:]}\n```"
+    finally:
+        stop_typing.set()
+        typing_task.cancel()
 
     if len(reply) <= 4096:
         await update.message.reply_text(reply)
