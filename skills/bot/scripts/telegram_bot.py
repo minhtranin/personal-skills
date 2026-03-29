@@ -452,7 +452,8 @@ def emergency_truncate(messages: list[dict]) -> list[dict]:
     return messages
 
 
-async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
+def ask_ai_sync(chat_id: int, user_message: str, config: dict) -> str:
+    """Synchronous version — called via asyncio.to_thread to keep event loop free."""
     provider_name = active_provider.get(chat_id, config.get("default_provider", "anthropic"))
 
     try:
@@ -561,6 +562,11 @@ async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
         break
 
     return f"Sorry, unexpected stop_reason: {response.stop_reason}"
+
+
+async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
+    """Async wrapper — runs the blocking AI call in a thread so typing indicator keeps working."""
+    return await asyncio.to_thread(ask_ai_sync, chat_id, user_message, config)
 
 
 # ---------------------------------------------------------------------------
@@ -926,13 +932,17 @@ async def slack_post_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def keep_typing(bot, chat_id: int, stop_event: asyncio.Event):
-    """Re-send typing indicator every 4s until stop_event is set."""
+    """Re-send typing indicator every 3s until stop_event is set."""
     while not stop_event.is_set():
         try:
             await bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
         except Exception:
             pass
-        await asyncio.sleep(4)
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=3)
+            break  # event was set
+        except asyncio.TimeoutError:
+            pass  # not set yet, loop and re-send
 
 
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
