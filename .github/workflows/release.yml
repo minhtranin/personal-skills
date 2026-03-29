@@ -49,8 +49,9 @@ jobs:
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ steps.changelog.outputs.notes }}
         run: |
-          RELEASE_NOTES="${{ steps.changelog.outputs.notes }}"
+          echo "$RELEASE_NOTES" > /tmp/release-notes.md
           gh release create ${{ github.ref_name }} \
             --title "personal-skills ${{ github.ref_name }}" \
-            --notes "$RELEASE_NOTES"
+            --notes-file /tmp/release-notes.md
