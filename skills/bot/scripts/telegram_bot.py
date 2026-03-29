@@ -493,8 +493,9 @@ def ask_ai_sync(chat_id: int, user_message: str, config: dict) -> str:
         history[:] = emergency_truncate(history)
 
     messages = list(history)
+    last_text_parts = []
 
-    for round_num in range(10):
+    for round_num in range(15):  # up to 15 tool rounds for deep codebase research
         try:
             response = client.messages.create(
                 model=model,
@@ -529,6 +530,8 @@ def ask_ai_sync(chat_id: int, user_message: str, config: dict) -> str:
                 raise  # re-raise non-context errors
 
         text_parts = [b.text for b in response.content if hasattr(b, "text")]
+        if text_parts:
+            last_text_parts = text_parts  # track latest text in case loop exhausts
 
         if response.stop_reason == "end_turn":
             final_text = "\n".join(text_parts).strip()
@@ -560,6 +563,12 @@ def ask_ai_sync(chat_id: int, user_message: str, config: dict) -> str:
             continue
 
         break
+
+    # Loop exhausted or unknown stop reason — return whatever text we have
+    if last_text_parts:
+        final_text = "\n".join(last_text_parts).strip()
+        history.append({"role": "assistant", "content": final_text})
+        return final_text + "\n\n_(reached tool call limit — response may be incomplete)_"
 
     return f"Sorry, unexpected stop_reason: {response.stop_reason}"
 
