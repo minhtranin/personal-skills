@@ -1,5 +1,5 @@
 ---
-name: ps-slack-login
+name: ps:slack-login
 description: Save Slack tokens (xoxc + xoxd) so other Slack skills can authenticate. Use when the user runs /ps-slack-login or needs to set up Slack credentials.
 argument-hint: [--token xoxc-... --cookie xoxd-...]
 allowed-tools: [Bash, Read, Write]

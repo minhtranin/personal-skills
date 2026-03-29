@@ -1,5 +1,5 @@
 ---
-name: ps-jira-plantask
+name: ps:jira-plantask
 description: Given a Jira issue key, research the codebase, produce an implementation plan aligned to existing patterns, break it into independent subtasks, create them in Jira, then guide implementation step by step. Use when the user runs /ps-jira-plantask <ISSUE-KEY>.
 argument-hint: <PROJ-123> [--no-create] [--refresh]
 allowed-tools: [Bash, Read, Write, Agent]

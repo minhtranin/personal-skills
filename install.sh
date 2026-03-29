@@ -174,7 +174,7 @@ install_skills() {
   mkdir -p "$commands_dir"
 
   if [ "$MODE" = "local" ]; then
-    for skill_dir in "$REPO_ROOT"/skills/*/ps-*/; do
+    for skill_dir in "$REPO_ROOT"/skills/*/ps:*/; do
       [ -f "$skill_dir/SKILL.md" ] || continue
       skill_name="$(basename "$skill_dir")"
       cp "$skill_dir/SKILL.md" "$commands_dir/$skill_name.md"
@@ -187,7 +187,7 @@ for f in json.load(sys.stdin)['tree']:
     p = f['path']
     if p.endswith('SKILL.md') and f['type'] == 'blob':
         skill_name = p.split('/')[-2]
-        if skill_name.startswith('ps-'):
+        if skill_name.startswith('ps:'):
             print(p)
 ")
     for filepath in $SKILL_PATHS; do
@@ -216,14 +216,14 @@ echo ""
 echo "Done! Installed: $(current_version)"
 echo ""
 echo "Commands:"
-echo "  /ps-tube-summary <youtube-url>   — summarize a YouTube video"
-echo "  /ps-medium-summary <medium-url>  — summarize a Medium article"
-echo "  /ps-jira-summary <PROJ-123>      — summarize a Jira issue"
-echo "  /ps-jira-plantask <PROJ-123>     — plan + break + create subtasks from a Jira issue"
-echo "  /ps-slack-login                  — save Slack tokens"
-echo "  /ps-slack-summary <thread-url>   — summarize a Slack thread"
-echo "  /ps-excalidraw <description>     — generate a diagram/chart (needs: pip3 install playwright)"
-echo "  /ps-web                          — browse all history in browser"
+echo "  /ps:tube-summary <youtube-url>   — summarize a YouTube video"
+echo "  /ps:medium-summary <medium-url>  — summarize a Medium article"
+echo "  /ps:jira-summary <PROJ-123>      — summarize a Jira issue"
+echo "  /ps:jira-plantask <PROJ-123>     — plan + break + create subtasks from a Jira issue"
+echo "  /ps:slack-login                  — save Slack tokens"
+echo "  /ps:slack-summary <thread-url>   — summarize a Slack thread"
+echo "  /ps:excalidraw <description>     — generate a diagram/chart (needs: pip3 install playwright)"
+echo "  /ps:web                          — browse all history in browser"
 echo ""
 echo "Manage:"
 echo "  # Check for updates"

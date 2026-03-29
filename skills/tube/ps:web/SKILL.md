@@ -1,5 +1,5 @@
 ---
-name: ps-web
+name: ps:web
 description: Launch a local web server to browse personal-skills history (YouTube summaries, etc.). Use when the user runs /ps-web or asks to view their summary history in a browser.
 argument-hint: [--port 5050]
 allowed-tools: [Bash]

@@ -1,5 +1,5 @@
 ---
-name: ps-medium-summary
+name: ps:medium-summary
 description: Fetch a Medium article via Freedium and summarize its main points. Use when the user runs /ps-medium-summary <url> or asks to summarize a Medium article.
 argument-hint: <medium-url> [--refresh]
 allowed-tools: [Bash, Read, Write]

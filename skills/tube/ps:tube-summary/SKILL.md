@@ -1,5 +1,5 @@
 ---
-name: ps-tube-summary
+name: ps:tube-summary
 description: Download the transcript from a YouTube video and summarize its main points. Use when the user runs /ps-tube-summary <url> or asks to summarize a YouTube video.
 argument-hint: <youtube-url> [--refresh]
 allowed-tools: [Bash, Read, Write]
