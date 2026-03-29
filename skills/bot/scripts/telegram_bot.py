@@ -76,13 +76,13 @@ PROVIDERS = {
         "default_model": "sonnet",
     },
     "minimax": {
-        "label":    "MiniMax (M2.5)",
+        "label":    "MiniMax (M2.7)",
         "base_url": "https://api.minimax.io/anthropic",
         "env_key":  "MINIMAX_API_KEY",
         "models": {
-            "haiku":  "MiniMax-M2.5",
-            "sonnet": "MiniMax-M2.5",
-            "opus":   "MiniMax-M2.5",
+            "haiku":  "MiniMax-M2.7",
+            "sonnet": "MiniMax-M2.7",
+            "opus":   "MiniMax-M2.7",
         },
         "default_model": "sonnet",
     },
