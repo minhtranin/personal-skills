@@ -113,10 +113,13 @@ def normalize_url(url: str) -> str:
 
 
 def freedium_url(medium_url: str, host: str) -> str:
-    return f"http://{host}/{medium_url}"
+    return f"https://{host}/{medium_url}"
 
 
 def fetch(url: str) -> str:
+    # Use https to avoid 308 redirects from http
+    if url.startswith("http://"):
+        url = "https://" + url[7:]
     req = urllib.request.Request(
         url,
         headers={
@@ -124,7 +127,7 @@ def fetch(url: str) -> str:
             "Accept": "text/html",
         },
     )
-    with urllib.request.urlopen(req, timeout=20) as resp:
+    with urllib.request.urlopen(req, timeout=30) as resp:
         return resp.read().decode("utf-8", errors="replace")
 
 
