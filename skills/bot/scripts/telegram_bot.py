@@ -22,6 +22,7 @@ import logging
 import os
 import subprocess
 import sys
+import traceback
 from pathlib import Path
 
 try:
@@ -103,7 +104,9 @@ PROVIDERS = {
 # System prompt
 # ---------------------------------------------------------------------------
 
-SYSTEM_PROMPT = """You are a personal assistant with access to the user's personal-skills toolkit.
+def build_system_prompt(cwd: str | None) -> str:
+    cwd_line = f"\nThe user's current working directory is: {cwd}" if cwd else ""
+    return f"""You are a personal assistant with access to the user's personal-skills toolkit.
 You can help with:
 - Summarizing Slack threads
 - Answering Slack threads by researching the codebase
@@ -111,9 +114,13 @@ You can help with:
 - Summarizing Medium articles
 - Summarizing Jira issues
 - Running shell commands when needed
+{cwd_line}
 
 When the user gives you a Slack/YouTube/Medium/Jira URL, use the run_script tool
 to execute the relevant Python script under ~/.local/share/personal-skills/scripts/.
+
+When the user asks to "lookup the codebase" or search code, use run_script to run
+grep, find, or cat commands against the working directory above.
 
 Be concise and conversational — this is a mobile chat interface.
 For long outputs, summarize key points first, then offer details.
@@ -199,6 +206,9 @@ async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
     except ValueError as e:
         return f"❌ Provider error: {e}"
 
+    cwd = config.get("cwd")
+    system_prompt = build_system_prompt(cwd)
+
     history = conversation_history.setdefault(chat_id, [])
     history.append({"role": "user", "content": user_message})
     if len(history) > 20:
@@ -210,7 +220,7 @@ async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
         response = client.messages.create(
             model=model,
             max_tokens=4096,
-            system=SYSTEM_PROMPT,
+            system=system_prompt,
             tools=TOOLS,
             messages=messages,
         )
@@ -240,7 +250,7 @@ async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
 
         break
 
-    return "Sorry, something went wrong."
+    return f"Sorry, unexpected stop_reason: {response.stop_reason}"
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +278,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Current AI provider: *{provider_label}*\n\n"
         "Commands:\n"
         "`/provider` — switch AI provider\n"
+        "`/cwd /path/to/repo` — set codebase directory\n"
         "`/clear` — reset conversation\n"
         "`/help` — show this message",
         parse_mode="Markdown"
@@ -321,6 +332,28 @@ async def provider_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def cwd_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    config = context.bot_data.get("config", {})
+    args_text = " ".join(context.args).strip() if context.args else ""
+
+    if not args_text:
+        current = config.get("cwd", "(not set)")
+        await update.message.reply_text(
+            f"Current codebase directory: `{current}`\n\nSet it with:\n`/cwd /path/to/your/repo`",
+            parse_mode="Markdown"
+        )
+        return
+
+    path = Path(args_text).expanduser()
+    if not path.exists():
+        await update.message.reply_text(f"❌ Path does not exist: `{args_text}`", parse_mode="Markdown")
+        return
+
+    config["cwd"] = str(path)
+    save_config(config)
+    await update.message.reply_text(f"✓ Codebase directory set to:\n`{path}`", parse_mode="Markdown")
+
+
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id   = update.effective_chat.id
     user_text = update.message.text.strip()
@@ -334,8 +367,9 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         reply = await ask_ai(chat_id, user_text, config)
     except Exception as e:
-        logger.error(f"AI error: {e}")
-        reply = f"❌ Error: {e}"
+        tb = traceback.format_exc()
+        logger.error(f"AI error: {tb}")
+        reply = f"❌ Error: {e}\n\n```\n{tb[-800:]}\n```"
 
     if len(reply) <= 4096:
         await update.message.reply_text(reply)
@@ -376,6 +410,7 @@ def main():
     parser.add_argument("--minimax-key",      help="MiniMax API key")
     parser.add_argument("--zai-key",          help="ZAI API key")
     parser.add_argument("--anthropic-key",    help="Anthropic API key")
+    parser.add_argument("--cwd",              help="Default codebase directory for code lookups")
     args = parser.parse_args()
 
     config = load_config()
@@ -398,6 +433,8 @@ def main():
 
         if args.default_provider:
             config["default_provider"] = args.default_provider
+        if args.cwd:
+            config["cwd"] = str(Path(args.cwd).expanduser())
 
         # Store provider API keys
         providers_cfg = config.setdefault("providers", {})
@@ -431,6 +468,7 @@ def main():
     app.add_handler(CommandHandler("help",     start_handler,    filters=user_filter))
     app.add_handler(CommandHandler("clear",    clear_handler,    filters=user_filter))
     app.add_handler(CommandHandler("provider", provider_handler, filters=user_filter))
+    app.add_handler(CommandHandler("cwd",      cwd_handler,      filters=user_filter))
     app.add_handler(CallbackQueryHandler(provider_callback, pattern="^provider:"))
     app.add_handler(MessageHandler(filters.TEXT & user_filter, message_handler))
 
