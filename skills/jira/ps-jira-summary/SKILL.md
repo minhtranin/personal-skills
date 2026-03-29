@@ -63,7 +63,22 @@ python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
   --description "<DESCRIPTION_FIRST_4000_CHARS>"
 ```
 
-## Step 6 — Output
+## Step 6 — Optional diagram (skip silently if unavailable)
+
+```bash
+python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
+```
+
+If `ok`: generate a status-flow diagram — issue title as central box, reporter → assignee as actors, current status badge, 2–3 key points as connected nodes. Write to `/tmp/jira_diagram.excalidraw`, then:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/excalidraw/render_excalidraw.py" \
+  /tmp/jira_diagram.excalidraw --output /tmp/jira_diagram.png 2>/dev/null
+```
+
+If PNG was created, display it with the Read tool. If anything fails, skip silently.
+
+## Step 7 — Output
 
 ```
 ## PROJ-123 — <title>

@@ -68,6 +68,21 @@ python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
   --text "<ARTICLE_TEXT_FIRST_4000_CHARS>"
 ```
 
-## Step 5 — Output to user
+## Step 5 — Optional diagram (skip silently if unavailable)
+
+```bash
+python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
+```
+
+If `ok`: generate a concept map — article title as central box, key points as connected leaf nodes grouped by theme. Write to `/tmp/medium_diagram.excalidraw`, then:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/excalidraw/render_excalidraw.py" \
+  /tmp/medium_diagram.excalidraw --output /tmp/medium_diagram.png 2>/dev/null
+```
+
+If PNG was created, display it with the Read tool. If anything fails, skip silently.
+
+## Step 6 — Output to user
 
 Present the title, author, summary and key points in clean markdown. Mention they can browse all history with `/ps-web`.

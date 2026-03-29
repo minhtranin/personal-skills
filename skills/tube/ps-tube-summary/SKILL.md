@@ -88,6 +88,21 @@ python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
   --transcript "<TRANSCRIPT_FIRST_4000_CHARS>"
 ```
 
-## Step 8 — Output to user
+## Step 8 — Optional diagram (skip silently if unavailable)
+
+```bash
+python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
+```
+
+If `ok`: generate a concept map — video title as central box, key points as connected leaf nodes grouped by theme. Write to `/tmp/tube_diagram.excalidraw`, then:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/excalidraw/render_excalidraw.py" \
+  /tmp/tube_diagram.excalidraw --output /tmp/tube_diagram.png 2>/dev/null
+```
+
+If PNG was created, display it with the Read tool. If anything fails, skip silently.
+
+## Step 9 — Output to user
 
 Present the summary and key points in clean markdown. Mention they can browse all history with `/ps-web`.

@@ -150,10 +150,12 @@ for f in json.load(sys.stdin)['tree']:
 ")
   for filepath in $SCRIPT_PATHS; do
     ns=$(echo "$filepath" | cut -d'/' -f2)
-    filename=$(basename "$filepath")
-    mkdir -p "$SCRIPTS_INSTALL_DIR/scripts/$ns"
-    curl -fsSL "$GITHUB_RAW/$filepath" -o "$SCRIPTS_INSTALL_DIR/scripts/$ns/$filename"
-    echo "  ✓ scripts/$ns/$filename"
+    # Preserve subdirectory structure under scripts/
+    relpath=$(echo "$filepath" | sed "s|skills/$ns/scripts/||")
+    destfile="$SCRIPTS_INSTALL_DIR/scripts/$ns/$relpath"
+    mkdir -p "$(dirname "$destfile")"
+    curl -fsSL "$GITHUB_RAW/$filepath" -o "$destfile"
+    echo "  ✓ scripts/$ns/$relpath"
   done
   find "$SCRIPTS_INSTALL_DIR/scripts" -name "*.sh" -exec chmod +x {} \;
 fi
@@ -217,9 +219,10 @@ echo "Commands:"
 echo "  /ps-tube-summary <youtube-url>   — summarize a YouTube video"
 echo "  /ps-medium-summary <medium-url>  — summarize a Medium article"
 echo "  /ps-jira-summary <PROJ-123>      — summarize a Jira issue"
-echo "  /ps-jira-plantask <PROJ-123>    — plan + break + create subtasks from a Jira issue"
+echo "  /ps-jira-plantask <PROJ-123>     — plan + break + create subtasks from a Jira issue"
 echo "  /ps-slack-login                  — save Slack tokens"
 echo "  /ps-slack-summary <thread-url>   — summarize a Slack thread"
+echo "  /ps-excalidraw <description>     — generate a diagram/chart (needs: pip3 install playwright)"
 echo "  /ps-web                          — browse all history in browser"
 echo ""
 echo "Manage:"

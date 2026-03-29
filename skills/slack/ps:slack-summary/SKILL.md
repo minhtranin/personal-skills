@@ -1,5 +1,5 @@
 ---
-name: ps-slack-summary
+name: ps:slack-summary
 description: Fetch a Slack thread and all its replies then summarize. Use when the user runs /ps-slack-summary <thread-url> or asks to summarize a Slack thread or conversation.
 argument-hint: <slack-thread-url> [--refresh]
 allowed-tools: [Bash, Read, Write]
@@ -71,7 +71,22 @@ python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py"
   --reply-count "<COUNT>"
 ```
 
-## Step 6 — Output
+## Step 6 — Optional diagram (skip silently if unavailable)
+
+```bash
+python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
+```
+
+If `ok`: generate a participant interaction diagram — each participant as a node, arrows showing who replied to whom (based on thread flow), topic as a title box at the top. Write to `/tmp/slack_diagram.excalidraw`, then:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/excalidraw/render_excalidraw.py" \
+  /tmp/slack_diagram.excalidraw --output /tmp/slack_diagram.png 2>/dev/null
+```
+
+If PNG was created, display it with the Read tool. If anything fails, skip silently.
+
+## Step 7 — Output
 
 ```
 ## #<channel> — <thread topic>
