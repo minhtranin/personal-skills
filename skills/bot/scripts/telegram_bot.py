@@ -213,12 +213,23 @@ def build_client(provider_name: str, config: dict) -> tuple[anthropic.Anthropic,
 
 
 # ---------------------------------------------------------------------------
-# Context management
+# Context management (Claude Code–style compaction)
 # ---------------------------------------------------------------------------
+#
+# Strategy (mirrors Claude Code):
+#   1. Tool outputs are cleared/truncated first (cheapest context to lose)
+#   2. Old conversation turns are summarized, preserving key facts & decisions
+#   3. Recent messages are always kept verbatim
+#   4. User is notified via Telegram when compaction triggers
+#
+# Thresholds tuned conservatively for third-party providers (MiniMax, ZAI)
+# which may have smaller context windows than Anthropic.
 
-MAX_CONTEXT_CHARS = 40_000   # ~10k tokens — safe for all providers
-COMPACT_TARGET    = 20_000   # compact down to this size
-RECENT_KEEP       = 4        # always keep last N message pairs untouched
+MAX_CONTEXT_CHARS = 40_000   # trigger compaction at ~10k tokens
+RECENT_KEEP       = 4        # always keep last N user+assistant pairs untouched
+
+# Notification queue: message_handler checks this after ask_ai returns
+compaction_notices: dict[int, str] = {}   # chat_id → notice text
 
 
 def estimate_chars(messages: list[dict]) -> int:
@@ -237,13 +248,79 @@ def estimate_chars(messages: list[dict]) -> int:
     return total
 
 
-def compact_history(history: list[dict], client: anthropic.Anthropic, model: str) -> list[dict]:
+def message_text(m: dict) -> str:
+    """Extract plain text from a message (handles str and list content)."""
+    c = m.get("content", "")
+    if isinstance(c, str):
+        return c
+    if isinstance(c, list):
+        parts = []
+        for b in c:
+            if isinstance(b, dict):
+                parts.append(str(b.get("text", "") or b.get("content", "")))
+            else:
+                parts.append(str(b))
+        return " ".join(parts)
+    return str(c)
+
+
+def strip_tool_outputs(history: list[dict]) -> list[dict]:
     """
-    When history is too large:
-    1. Take everything except the last RECENT_KEEP pairs
-    2. Ask Claude to summarize it into a single context message
-    3. Replace old messages with [summary_message] + recent messages
+    Phase 1 — clear verbose tool outputs from older messages.
+    Like Claude Code: tool outputs are the cheapest context to lose.
+    Keep the tool call name + a short excerpt, drop the full result.
+    Only strip from messages older than the RECENT_KEEP window.
     """
+    if len(history) <= RECENT_KEEP * 2:
+        return history
+
+    split   = len(history) - (RECENT_KEEP * 2)
+    old     = history[:split]
+    recent  = history[split:]
+    cleaned = []
+
+    for m in old:
+        c = m.get("content", "")
+        if isinstance(c, list):
+            new_blocks = []
+            for block in c:
+                if isinstance(block, dict) and block.get("type") == "tool_result":
+                    # Keep first 200 chars of tool output
+                    content = str(block.get("content", ""))
+                    new_blocks.append({
+                        **block,
+                        "content": content[:200] + ("..." if len(content) > 200 else ""),
+                    })
+                else:
+                    new_blocks.append(block)
+            cleaned.append({**m, "content": new_blocks})
+        else:
+            cleaned.append(m)
+
+    return cleaned + recent
+
+
+def compact_history(
+    history: list[dict],
+    client: anthropic.Anthropic,
+    model: str,
+    chat_id: int,
+) -> list[dict]:
+    """
+    Phase 2 — summarize old conversation turns (Claude Code–style).
+
+    Steps:
+      1. Strip tool outputs first (cheapest savings)
+      2. If still too large, summarize old turns into a compact summary
+      3. Keep recent messages verbatim
+      4. Queue a notification for the user
+    """
+    # Phase 1: strip tool outputs
+    history = strip_tool_outputs(history)
+    if estimate_chars(history) <= MAX_CONTEXT_CHARS:
+        return history
+
+    # Phase 2: summarize old turns
     if len(history) <= RECENT_KEEP * 2:
         return history
 
@@ -251,49 +328,76 @@ def compact_history(history: list[dict], client: anthropic.Anthropic, model: str
     old_messages = history[:split]
     recent       = history[split:]
 
-    # Build a plain-text digest of old messages for summarization
+    # Build digest — extract user requests + key assistant facts
+    # Prioritize user messages (their intent) over assistant tool calls
     digest_parts = []
     for m in old_messages:
         role = m.get("role", "")
-        c    = m.get("content", "")
-        if isinstance(c, list):
-            text = " ".join(
-                b.get("text", "") or b.get("content", "")
-                for b in c if isinstance(b, dict)
-            )
-        else:
-            text = str(c)
-        # Truncate each message to 800 chars to keep digest manageable
-        digest_parts.append(f"[{role}]: {text[:800]}")
+        text = message_text(m)
+        if not text.strip():
+            continue
+        # User messages get more space (their intent matters most)
+        limit = 1000 if role == "user" else 600
+        digest_parts.append(f"[{role}]: {text[:limit]}")
 
     digest = "\n\n".join(digest_parts)
+    # Cap digest itself to avoid huge summarization request
+    if len(digest) > 12_000:
+        digest = digest[:12_000] + "\n\n[... older messages truncated ...]"
+
+    before_count = len(old_messages)
+    before_chars = estimate_chars(old_messages)
 
     try:
         summary_resp = client.messages.create(
             model=model,
-            max_tokens=512,
+            max_tokens=800,
             messages=[{
                 "role": "user",
                 "content": (
-                    "Summarize this conversation history in 3-5 sentences, "
-                    "keeping all key facts, decisions, URLs, and action items:\n\n"
-                    f"{digest}"
+                    "You are a conversation compactor. Summarize the conversation below "
+                    "into a structured summary that preserves:\n"
+                    "- All URLs, channel names, issue keys, and identifiers\n"
+                    "- Key decisions made and actions taken\n"
+                    "- Important code findings (file names, function names)\n"
+                    "- Any pending questions or tasks\n\n"
+                    "Format:\n"
+                    "## Context\n<what the conversation was about>\n\n"
+                    "## Key Facts\n<bullet points>\n\n"
+                    "## Actions Taken\n<what was done>\n\n"
+                    "## Pending\n<anything still open>\n\n"
+                    "Conversation:\n\n" + digest
                 )
             }]
         )
         summary_text = summary_resp.content[0].text if summary_resp.content else "(summary unavailable)"
     except Exception as e:
-        logger.warning(f"Context compaction failed: {e} — truncating instead")
+        logger.warning(f"Context compaction summarize failed: {e} — dropping old messages")
+        compaction_notices[chat_id] = (
+            "⚡ *Context compacted* — old messages dropped (summarization failed).\n"
+            "Recent context preserved."
+        )
         return recent
 
-    logger.info(f"Compacted {len(old_messages)} messages into summary")
+    logger.info(
+        f"Compacted {before_count} messages ({before_chars} chars) into summary "
+        f"({len(summary_text)} chars)"
+    )
+
+    # Queue user notification
+    compaction_notices[chat_id] = (
+        f"⚡ *Context compacted* — {before_count} older messages summarized.\n"
+        "Your recent messages and key facts are preserved.\n"
+        "Use `/clear` to start completely fresh."
+    )
+
     summary_message = {
         "role":    "user",
-        "content": f"[Earlier conversation summary]\n{summary_text}",
+        "content": f"[Compacted conversation summary — older messages were summarized to save context]\n\n{summary_text}",
     }
     ack_message = {
         "role":    "assistant",
-        "content": "Understood, I have the context from earlier.",
+        "content": "Got it — I have the context from our earlier conversation. Continuing from where we left off.",
     }
     return [summary_message, ack_message] + recent
 
@@ -337,10 +441,10 @@ async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
     history = conversation_history.setdefault(chat_id, [])
     history.append({"role": "user", "content": user_message})
 
-    # Auto-compact if context is too large
+    # Auto-compact if context is too large (Claude Code–style: tool outputs first, then summarize)
     if estimate_chars(history) > MAX_CONTEXT_CHARS:
         logger.info(f"Context too large ({estimate_chars(history)} chars) — compacting...")
-        history[:] = compact_history(history, client, model)
+        history[:] = compact_history(history, client, model, chat_id)
         logger.info(f"After compact: {estimate_chars(history)} chars, {len(history)} messages")
 
     messages = list(history)
@@ -764,6 +868,11 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         stop_typing.set()
         typing_task.cancel()
+
+    # Send compaction notice if one was queued
+    notice = compaction_notices.pop(chat_id, None)
+    if notice:
+        await update.message.reply_text(notice, parse_mode="Markdown")
 
     if len(reply) <= 4096:
         await update.message.reply_text(reply)
