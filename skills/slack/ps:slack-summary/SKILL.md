@@ -25,7 +25,7 @@ bash "$HOME/.local/share/personal-skills/scripts/slack/check_slack_tokens.sh"
 ```
 
 - **Exit 0:** continue.
-- **Exit 1:** show the printed instructions to the user exactly as-is and stop. Tell them to run `/ps-slack-login` after saving tokens.
+- **Exit 1:** show the printed instructions to the user exactly as-is and stop. Do not mention `/ps-slack-login` — that command no longer exists.
 
 ## Step 2 — Check history (skip if --refresh)
 
@@ -44,7 +44,7 @@ python3 "$HOME/.local/share/personal-skills/scripts/slack/fetch_slack_thread.py"
 
 Outputs JSON: `channel_name`, `thread_ts`, `parent` (author, text), `replies[]` (author, ts, text, reactions), `participants[]`, `reply_count`.
 
-- If exit 1 (auth error): tell the user tokens expired and they need to run `/ps-slack-login` again.
+- If exit 1 (auth error): tell the user tokens expired — they need to re-extract manually using F12 DevTools (see the instructions from Step 1 above), then run `save_slack_tokens.py --token xoxc-... --cookie xoxd-...`.
 - If exit 2: show error and stop.
 
 ## Step 4 — Summarize

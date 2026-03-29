@@ -1,16 +1,35 @@
 #!/usr/bin/env bash
-# Check if Slack tokens are available — from saved file or desktop app.
+# Check if Slack tokens are available.
 # Exit 0 = ready, Exit 1 = not configured
 #
 # Token priority:
-#   1. ~/.local/share/personal-skills/slack-tokens.json  (manually saved)
-#   2. SLACK_TOKEN + SLACK_COOKIE env vars
-#   3. Auto-extracted from Slack desktop app storage
+#   1. Auto-extract from Slack desktop app storage (LevelDB)  ← always try first
+#   2. Saved tokens file (~/.local/share/personal-skills/slack-tokens.json)
 
 TOKENS_FILE="$HOME/.local/share/personal-skills/slack-tokens.json"
 SCRIPTS_DIR="$HOME/.local/share/personal-skills/scripts/slack"
 
-# ── 1. Check saved tokens file ────────────────────────────────────────────────
+# ── 1. Try auto-extract from Slack desktop app storage ─────────────────────────
+EXTRACT=$(python3 "$SCRIPTS_DIR/get_slack_tokens.py" 2>/dev/null)
+if [ $? -eq 0 ] && [ -n "$EXTRACT" ]; then
+  mkdir -p "$(dirname "$TOKENS_FILE")"
+  echo "$EXTRACT" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+workspaces = data.get('workspaces', {})
+if not workspaces:
+    sys.exit(1)
+# Use first workspace, store xoxd as 'd' for compatibility
+ws = next(iter(workspaces.values()))
+out = {'token': ws.get('token',''), 'd': ws.get('d',''), 'all_workspaces': workspaces}
+print(json.dumps(out, indent=2))
+" > "$TOKENS_FILE" 2>/dev/null
+  chmod 600 "$TOKENS_FILE" 2>/dev/null
+  echo "[ok] Slack tokens auto-extracted from desktop app ($SCRIPTS_DIR/get_slack_tokens.py)"
+  exit 0
+fi
+
+# ── 2. Check saved tokens file ─────────────────────────────────────────────────
 if [ -f "$TOKENS_FILE" ]; then
   TOKEN=$(python3 -c "import json; d=json.load(open('$TOKENS_FILE')); print(d.get('token',''))" 2>/dev/null)
   if [ -n "$TOKEN" ]; then
@@ -19,55 +38,39 @@ if [ -f "$TOKENS_FILE" ]; then
   fi
 fi
 
-# ── 2. Check env vars ─────────────────────────────────────────────────────────
-if [ -n "$SLACK_TOKEN" ] && [ -n "$SLACK_COOKIE" ]; then
-  echo "[ok] Slack tokens loaded from environment"
-  exit 0
-fi
-
-# ── 3. Try auto-extract from desktop app ─────────────────────────────────────
-EXTRACT=$(python3 "$SCRIPTS_DIR/get_slack_tokens.py" 2>/dev/null)
-if [ $? -eq 0 ] && [ -n "$EXTRACT" ]; then
-  # Save extracted tokens
-  mkdir -p "$(dirname "$TOKENS_FILE")"
-  echo "$EXTRACT" | python3 -c "
-import json, sys
-data = json.load(sys.stdin)
-workspaces = data.get('workspaces', {})
-if not workspaces:
-    sys.exit(1)
-# Use first workspace
-ws = next(iter(workspaces.values()))
-out = {'token': ws.get('token',''), 'd': ws.get('d',''), 'all_workspaces': workspaces}
-print(json.dumps(out, indent=2))
-" > "$TOKENS_FILE" 2>/dev/null
-  chmod 600 "$TOKENS_FILE"
-  echo "[ok] Slack tokens auto-extracted from desktop app and saved"
-  exit 0
-fi
-
-# ── Not found — print setup instructions ─────────────────────────────────────
+# ── Not found ─────────────────────────────────────────────────────────────────
 echo ""
 echo "  Slack tokens not configured."
 echo ""
-echo "  The easiest way — extract from your browser (1 minute):"
+echo "  Detected platform:"
+case "$(uname -s)" in
+  Linux)
+    if [ -f /proc/version ] && grep -qi microsoft /proc/version 2>/dev/null; then
+      echo "  WSL (Windows Subsystem for Linux)"
+      echo "  Auto-extract: looks for Windows Slack at %APPDATA%\\Slack\\storage"
+    else
+      echo "  Linux (native)"
+      echo "  Auto-extract: looks for Slack at ~/.config/Slack/storage"
+      if [ -d "$HOME/snap/slack" ]; then
+        echo "  (also checked ~/snap/slack/current/.config/Slack/storage)"
+      fi
+      if [ -d "$HOME/.var/app/com.slack.Slack" ]; then
+        echo "  (also checked ~/.var/app/com.slack.Slack/data/Slack/storage)"
+      fi
+    fi
+    ;;
+  Darwin) echo "  macOS — auto-extract: looks for ~/Library/Application Support/Slack/storage" ;;
+  *)      echo "  $(uname -s)" ;;
+esac
 echo ""
-echo "  ── Step 1 ──────────────────────────────────────────────────────────"
-echo "  Open https://app.slack.com in Chrome or Edge"
-echo "  Make sure you are logged in to your workspace"
+echo "  Manual fallback (F12 DevTools):"
 echo ""
-echo "  ── Step 2: Get xoxd token ──────────────────────────────────────────"
-echo "  Press F12 → Application tab → Storage → Cookies → app.slack.com"
-echo "  Find the cookie named: d"
-echo "  Copy its Value  (starts with xoxd-...)"
+echo "  1. Open Slack desktop app (or https://app.slack.com in browser)"
+echo "  2. Press F12 → Application tab"
+echo "     - Cookies → find 'd' cookie → copy Value  (starts xoxd-)"
+echo "     - Network tab → filter 'api' → find Authorization header  (starts xoxc-)"
+echo "  3. Save manually:"
 echo ""
-echo "  ── Step 3: Get xoxc token ──────────────────────────────────────────"
-echo "  Press F12 → Network tab → in filter box type: api"
-echo "  Click any request in the list"
-echo "  In Headers → Request Headers → find: Authorization"
-echo "  Copy the value  (starts with xoxc-...)"
-echo ""
-echo "  ── Step 4: Save tokens ─────────────────────────────────────────────"
-echo "  Run /ps-slack-login and paste both values when prompted by Claude"
+echo "     python3 $SCRIPTS_DIR/save_slack_tokens.py --token xoxc-... --cookie xoxd-..."
 echo ""
 exit 1

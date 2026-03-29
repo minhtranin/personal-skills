@@ -7,10 +7,24 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-03-29
+
+### Removed
+- `/ps:slack-login` command — no longer needed, tokens auto-extracted from Slack desktop app
+
+### Changed
+- `check_slack_tokens.sh`: auto-extract from Slack desktop app storage first (LevelDB), then fallback to saved file, then manual F12 instructions
+- `get_slack_tokens.py`: added Linux Snap and Flatpak storage paths, fixed WSL detection for Windows username
+- `ps:slack-summary` auth error now refers to manual re-extraction via F12 + `save_slack_tokens.py`
+
 ## [0.3.2] - 2026-03-29
 
 ### Added
-- `/ps:slack-login` now starts a local token extraction server on port 5051 — visit http://localhost:5051 in a browser logged into Slack to auto-extract xoxc + xoxd tokens (no manual DevTools copy/paste needed)
+- `/ps:excalidraw` — generate Excalidraw diagrams from description and render to PNG via Playwright + headless Chromium
+- Optional diagram step in all summary skills (`/ps:tube-summary`, `/ps:medium-summary`, `/ps:jira-summary`, `/ps:slack-summary`) — silently skipped if `playwright` is not installed
+- `render_excalidraw.py` + `render_template.html` renderer using `@excalidraw/excalidraw` ESM CDN
+- `setup.sh` for one-time Playwright + Chromium install
+- Fixed remote install to preserve subdirectory structure under `scripts/`
 
 ## [0.3.1] - 2026-03-29
 

@@ -27,13 +27,21 @@ from pathlib import Path
 def find_slack_storage() -> Path | None:
     candidates = []
 
-    # Linux
+    # Linux native (.deb/.rpm)
     candidates.append(Path.home() / ".config/Slack/storage")
+
+    # Linux Snap
+    snap_base = Path.home() / "snap" / "slack" / "current"
+    if snap_base.exists():
+        candidates.append(snap_base / ".config/Slack/storage")
+
+    # Linux Flatpak
+    candidates.append(Path.home() / ".var/app/com.slack.Slack/data/Slack/storage")
 
     # macOS
     candidates.append(Path.home() / "Library/Application Support/Slack/storage")
 
-    # WSL → Windows
+    # Windows native (from WSL)
     win_user = _wsl_windows_user()
     if win_user:
         candidates.append(Path(f"/mnt/c/Users/{win_user}/AppData/Roaming/Slack/storage"))
