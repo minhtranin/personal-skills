@@ -611,8 +611,9 @@ async def slack_post_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     typing_task = asyncio.create_task(keep_typing(context.bot, chat_id, stop_typing))
 
     try:
+        scripts_dir = Path.home() / ".local/share/personal-skills/scripts/slack"
         result = run_tool(
-            f"python3 '$HOME/.local/share/personal-skills/scripts/slack/post_slack_message.py' "
+            f"python3 '{scripts_dir}/post_slack_message.py' "
             f"--to '{safe_channel}' --message '{safe_message}'"
         )
         if result.startswith("ERROR"):
