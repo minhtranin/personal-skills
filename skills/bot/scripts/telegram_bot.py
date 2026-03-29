@@ -127,6 +127,14 @@ You can help with:
 When the user gives you a Slack/YouTube/Medium/Jira URL, use the run_script tool
 to execute the relevant Python script under ~/.local/share/personal-skills/scripts/.
 
+To post a new Slack message:
+  python3 ~/.local/share/personal-skills/scripts/slack/post_slack_message.py --to '<channel>' --message '<text>'
+To reply to a Slack thread:
+  python3 ~/.local/share/personal-skills/scripts/slack/post_slack_reply.py --url '<thread-url>' --message '<text>'
+
+When the user says "post again", "send again", "new one with", or similar follow-ups,
+use the channel/URL from the previous message in the conversation and the NEW message text they provide.
+
 When the user asks to "lookup the codebase", "search code", or asks about implementation,
 use run_script to run grep, find, or cat commands against the directories listed above.
 
@@ -900,10 +908,21 @@ async def slack_post_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
     await update.message.reply_text(reply)
 
-    # Inject into conversation history so follow-ups like "post again with 'ok'" work
+    # Inject rich context into history so follow-ups like "post again with 'ok'" work
+    scripts_dir_str = str(Path.home() / ".local/share/personal-skills/scripts/slack")
     history = conversation_history.setdefault(chat_id, [])
-    history.append({"role": "user",      "content": f"/slack_post {channel} {message}"})
-    history.append({"role": "assistant", "content": reply})
+    history.append({
+        "role": "user",
+        "content": f"I posted a Slack message to channel '{channel}' with message: \"{message}\""
+    })
+    history.append({
+        "role": "assistant",
+        "content": (
+            f"{reply}\n\n"
+            f"[Noted: channel='{channel}', script=python3 '{scripts_dir_str}/post_slack_message.py' "
+            f"--to '<channel>' --message '<text>']"
+        )
+    })
 
 
 async def keep_typing(bot, chat_id: int, stop_event: asyncio.Event):
