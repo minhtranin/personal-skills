@@ -2,11 +2,10 @@
 """
 personal-skills Telegram bot — chat with Claude Code from your phone.
 
-Features:
-  - Runs any ps: command by mentioning it: "slack-answer <url>"
-  - Conversational: multi-turn chat with Claude (streaming)
-  - Secure: only responds to your Telegram user ID
-  - Runs ps: scripts directly, or passes freeform prompts to Claude SDK
+Supports multiple AI providers via /provider command:
+  - anthropic  : Anthropic API (default, requires ANTHROPIC_API_KEY)
+  - minimax    : MiniMax via Anthropic-compatible API
+  - zai        : ZAI/GLM via Anthropic-compatible API
 
 Usage:
   python3 telegram_bot.py --token <TELEGRAM_BOT_TOKEN> --user-id <YOUR_TELEGRAM_USER_ID>
@@ -26,8 +25,8 @@ import sys
 from pathlib import Path
 
 try:
-    from telegram import Update
-    from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+    from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+    from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
     from telegram.constants import ChatAction
 except ImportError:
     print("ERROR: python-telegram-bot not installed.")
@@ -46,7 +45,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 
 SCRIPTS_DIR = Path.home() / ".local/share/personal-skills/scripts"
-CONFIG_FILE = Path.home() / ".local/share/personal-skills/bot-config.json"
+CONFIG_FILE  = Path.home() / ".local/share/personal-skills/bot-config.json"
 
 logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -57,24 +56,71 @@ logger = logging.getLogger(__name__)
 # In-memory conversation history per chat
 conversation_history: dict[int, list[dict]] = {}
 
+# Active provider per chat (defaults to config default)
+active_provider: dict[int, str] = {}
+
+# ---------------------------------------------------------------------------
+# Provider definitions
+# ---------------------------------------------------------------------------
+
+PROVIDERS = {
+    "anthropic": {
+        "label":    "Anthropic (Claude)",
+        "base_url": None,  # uses default
+        "env_key":  "ANTHROPIC_API_KEY",
+        "models": {
+            "haiku":  "claude-haiku-4-5-20251001",
+            "sonnet": "claude-sonnet-4-6",
+            "opus":   "claude-opus-4-6",
+        },
+        "default_model": "sonnet",
+    },
+    "minimax": {
+        "label":    "MiniMax (M2.5)",
+        "base_url": "https://api.minimax.io/anthropic",
+        "env_key":  "MINIMAX_API_KEY",
+        "models": {
+            "haiku":  "MiniMax-M2.5",
+            "sonnet": "MiniMax-M2.5",
+            "opus":   "MiniMax-M2.5",
+        },
+        "default_model": "sonnet",
+    },
+    "zai": {
+        "label":    "ZAI / GLM",
+        "base_url": "https://api.z.ai/api/anthropic",
+        "env_key":  "ZAI_API_KEY",
+        "models": {
+            "haiku":  "glm-4.5-air",
+            "sonnet": "glm-4.7",
+            "opus":   "glm-5",
+        },
+        "default_model": "sonnet",
+    },
+}
+
+# ---------------------------------------------------------------------------
+# System prompt
+# ---------------------------------------------------------------------------
+
 SYSTEM_PROMPT = """You are a personal assistant with access to the user's personal-skills toolkit.
 You can help with:
-- Summarizing Slack threads (/ps:slack-summary)
-- Answering Slack threads by researching the codebase (/ps:slack-answer)
-- Summarizing YouTube videos (/ps:tube-summary)
-- Summarizing Medium articles (/ps:medium-summary)
-- Summarizing Jira issues (/ps:jira-summary)
+- Summarizing Slack threads
+- Answering Slack threads by researching the codebase
+- Summarizing YouTube videos
+- Summarizing Medium articles
+- Summarizing Jira issues
 - Running shell commands when needed
 
-When the user gives you a Slack/YouTube/Medium/Jira URL or asks to run a ps: command,
-use the run_script tool to execute the relevant Python script directly.
+When the user gives you a Slack/YouTube/Medium/Jira URL, use the run_script tool
+to execute the relevant Python script under ~/.local/share/personal-skills/scripts/.
 
 Be concise and conversational — this is a mobile chat interface.
 For long outputs, summarize key points first, then offer details.
 """
 
 # ---------------------------------------------------------------------------
-# Tools for Claude
+# Tools
 # ---------------------------------------------------------------------------
 
 TOOLS = [
@@ -86,7 +132,7 @@ TOOLS = [
             "properties": {
                 "command": {
                     "type": "string",
-                    "description": "The full shell command to run, e.g. 'python3 ~/.local/share/personal-skills/scripts/slack/fetch_slack_thread.py <url>'"
+                    "description": "The full shell command to run."
                 }
             },
             "required": ["command"]
@@ -96,7 +142,6 @@ TOOLS = [
 
 
 def run_tool(command: str) -> str:
-    """Execute a shell command and return stdout+stderr."""
     try:
         result = subprocess.run(
             command,
@@ -116,29 +161,60 @@ def run_tool(command: str) -> str:
         return f"ERROR: {e}"
 
 
-async def ask_claude(chat_id: int, user_message: str) -> str:
-    """Send message to Claude with tool use loop, return final text response."""
-    client = anthropic.Anthropic()
+# ---------------------------------------------------------------------------
+# AI client builder
+# ---------------------------------------------------------------------------
+
+def build_client(provider_name: str, config: dict) -> tuple[anthropic.Anthropic, str]:
+    """Returns (client, model_name) for the given provider."""
+    provider = PROVIDERS[provider_name]
+
+    # Resolve API key: config file → env var
+    api_key = (
+        config.get("providers", {}).get(provider_name, {}).get("api_key")
+        or os.environ.get(provider["env_key"])
+        or os.environ.get("ANTHROPIC_API_KEY")  # fallback
+    )
+
+    if not api_key:
+        raise ValueError(
+            f"No API key for provider '{provider_name}'. "
+            f"Set {provider['env_key']} in bot-config.json or environment."
+        )
+
+    kwargs = {"api_key": api_key}
+    if provider["base_url"]:
+        kwargs["base_url"] = provider["base_url"]
+
+    client = anthropic.Anthropic(**kwargs)
+    model  = provider["models"][provider["default_model"]]
+    return client, model
+
+
+async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
+    provider_name = active_provider.get(chat_id, config.get("default_provider", "anthropic"))
+
+    try:
+        client, model = build_client(provider_name, config)
+    except ValueError as e:
+        return f"❌ Provider error: {e}"
 
     history = conversation_history.setdefault(chat_id, [])
     history.append({"role": "user", "content": user_message})
-
-    # Keep last 20 turns to avoid token bloat
     if len(history) > 20:
         history[:] = history[-20:]
 
     messages = list(history)
 
-    for _ in range(10):  # max tool call rounds
+    for _ in range(10):
         response = client.messages.create(
-            model="claude-opus-4-6",
+            model=model,
             max_tokens=4096,
             system=SYSTEM_PROMPT,
             tools=TOOLS,
             messages=messages,
         )
 
-        # Collect text from this response turn
         text_parts = [b.text for b in response.content if hasattr(b, "text")]
 
         if response.stop_reason == "end_turn":
@@ -147,26 +223,24 @@ async def ask_claude(chat_id: int, user_message: str) -> str:
             return final_text or "(done)"
 
         if response.stop_reason == "tool_use":
-            # Execute all tool calls
             tool_results = []
             for block in response.content:
                 if block.type == "tool_use":
-                    logger.info(f"Tool call: {block.name}({block.input})")
-                    tool_output = run_tool(block.input["command"])
-                    logger.info(f"Tool output: {tool_output[:200]}")
+                    logger.info(f"Tool: {block.name}({block.input})")
+                    out = run_tool(block.input["command"])
+                    logger.info(f"Output: {out[:200]}")
                     tool_results.append({
-                        "type": "tool_result",
+                        "type":        "tool_result",
                         "tool_use_id": block.id,
-                        "content": tool_output,
+                        "content":     out,
                     })
-
             messages.append({"role": "assistant", "content": response.content})
-            messages.append({"role": "user", "content": tool_results})
+            messages.append({"role": "user",      "content": tool_results})
             continue
 
         break
 
-    return "Sorry, something went wrong with the AI response."
+    return "Sorry, something went wrong."
 
 
 # ---------------------------------------------------------------------------
@@ -178,14 +252,22 @@ def make_allowed_filter(user_id: int):
 
 
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    config = context.bot_data.get("config", {})
+    current = active_provider.get(
+        update.effective_chat.id,
+        config.get("default_provider", "anthropic")
+    )
+    provider_label = PROVIDERS.get(current, {}).get("label", current)
     await update.message.reply_text(
         "👋 *personal-skills bot*\n\n"
         "Send me:\n"
-        "• A Slack thread URL → I'll summarize or answer it\n"
-        "• A YouTube/Medium URL → I'll summarize it\n"
-        "• A Jira issue key → I'll summarize it\n"
+        "• A Slack thread URL → summarize or answer it\n"
+        "• A YouTube/Medium URL → summarize it\n"
+        "• A Jira issue key → summarize it\n"
         "• Any question about your codebase\n\n"
+        f"Current AI provider: *{provider_label}*\n\n"
         "Commands:\n"
+        "`/provider` — switch AI provider\n"
         "`/clear` — reset conversation\n"
         "`/help` — show this message",
         parse_mode="Markdown"
@@ -193,39 +275,78 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def clear_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    conversation_history.pop(chat_id, None)
+    conversation_history.pop(update.effective_chat.id, None)
     await update.message.reply_text("🗑️ Conversation cleared.")
 
 
+async def provider_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    config  = context.bot_data.get("config", {})
+    current = active_provider.get(
+        update.effective_chat.id,
+        config.get("default_provider", "anthropic")
+    )
+
+    keyboard = []
+    for key, p in PROVIDERS.items():
+        label = p["label"]
+        if key == current:
+            label = f"✓ {label}"
+        keyboard.append([InlineKeyboardButton(label, callback_data=f"provider:{key}")])
+
+    await update.message.reply_text(
+        "Select AI provider:",
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+
+
+async def provider_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    provider_name = query.data.split(":", 1)[1]
+    if provider_name not in PROVIDERS:
+        await query.edit_message_text("Unknown provider.")
+        return
+
+    chat_id = query.message.chat_id
+    active_provider[chat_id] = provider_name
+    label = PROVIDERS[provider_name]["label"]
+
+    # Clear history when switching provider (different context/format)
+    conversation_history.pop(chat_id, None)
+
+    await query.edit_message_text(
+        f"✓ Switched to *{label}*\nConversation cleared.",
+        parse_mode="Markdown"
+    )
+
+
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
+    chat_id   = update.effective_chat.id
     user_text = update.message.text.strip()
+    config    = context.bot_data.get("config", {})
 
     if not user_text:
         return
 
-    # Show typing indicator
     await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
 
     try:
-        reply = await ask_claude(chat_id, user_text)
+        reply = await ask_ai(chat_id, user_text, config)
     except Exception as e:
-        logger.error(f"Claude error: {e}")
+        logger.error(f"AI error: {e}")
         reply = f"❌ Error: {e}"
 
-    # Telegram message limit is 4096 chars — split if needed
     if len(reply) <= 4096:
         await update.message.reply_text(reply)
     else:
-        chunks = [reply[i:i+4000] for i in range(0, len(reply), 4000)]
-        for chunk in chunks:
+        for chunk in [reply[i:i+4000] for i in range(0, len(reply), 4000)]:
             await update.message.reply_text(chunk)
             await asyncio.sleep(0.3)
 
 
 # ---------------------------------------------------------------------------
-# Main
+# Config helpers
 # ---------------------------------------------------------------------------
 
 def load_config() -> dict:
@@ -234,17 +355,27 @@ def load_config() -> dict:
     return {}
 
 
-def save_config(token: str, user_id: int):
+def save_config(data: dict):
     CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    CONFIG_FILE.write_text(json.dumps({"token": token, "user_id": user_id}, indent=2))
+    CONFIG_FILE.write_text(json.dumps(data, indent=2))
     CONFIG_FILE.chmod(0o600)
 
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--token",   help="Telegram bot token (from @BotFather)")
-    parser.add_argument("--user-id", type=int, help="Your Telegram user ID (from @userinfobot)")
-    parser.add_argument("--setup",   action="store_true", help="Save token+user-id to config and exit")
+    parser.add_argument("--token",            help="Telegram bot token")
+    parser.add_argument("--user-id",          type=int, help="Your Telegram user ID")
+    parser.add_argument("--setup",            action="store_true", help="Save config and exit")
+    parser.add_argument("--default-provider", default=None,
+                        choices=list(PROVIDERS.keys()),
+                        help="Default AI provider (anthropic/minimax/zai)")
+    parser.add_argument("--minimax-key",      help="MiniMax API key")
+    parser.add_argument("--zai-key",          help="ZAI API key")
+    parser.add_argument("--anthropic-key",    help="Anthropic API key")
     args = parser.parse_args()
 
     config = load_config()
@@ -253,37 +384,54 @@ def main():
     user_id = args.user_id or config.get("user_id") or os.environ.get("TELEGRAM_ALLOWED_USER_ID")
 
     if not token:
-        print("ERROR: No Telegram bot token provided.")
-        print("Get one from @BotFather on Telegram, then run:")
-        print("  python3 telegram_bot.py --token <TOKEN> --user-id <YOUR_ID> --setup")
+        print("ERROR: No Telegram bot token. Run with --token <TOKEN> --user-id <ID> --setup")
         sys.exit(1)
-
     if not user_id:
-        print("ERROR: No allowed user ID provided.")
-        print("Get your user ID from @userinfobot on Telegram, then run:")
-        print("  python3 telegram_bot.py --token <TOKEN> --user-id <YOUR_ID> --setup")
+        print("ERROR: No user ID. Run with --token <TOKEN> --user-id <ID> --setup")
         sys.exit(1)
 
     user_id = int(user_id)
 
     if args.setup:
-        save_config(token, user_id)
+        config["token"]   = token
+        config["user_id"] = user_id
+
+        if args.default_provider:
+            config["default_provider"] = args.default_provider
+
+        # Store provider API keys
+        providers_cfg = config.setdefault("providers", {})
+        if args.anthropic_key:
+            providers_cfg.setdefault("anthropic", {})["api_key"] = args.anthropic_key
+        if args.minimax_key:
+            providers_cfg.setdefault("minimax", {})["api_key"] = args.minimax_key
+        if args.zai_key:
+            providers_cfg.setdefault("zai", {})["api_key"] = args.zai_key
+
+        save_config(config)
         print(f"✓ Config saved to {CONFIG_FILE}")
-        print(f"  Token : {token[:10]}...")
-        print(f"  User ID: {user_id}")
-        print("\nNow run without --setup to start the bot:")
+        print(f"  Token           : {token[:12]}...")
+        print(f"  User ID         : {user_id}")
+        print(f"  Default provider: {config.get('default_provider', 'anthropic')}")
+        for p, v in config.get("providers", {}).items():
+            key = v.get("api_key", "")
+            print(f"  {p} key       : {key[:12]}..." if key else f"  {p} key       : (not set)")
+        print("\nStart the bot:")
         print("  python3 telegram_bot.py")
         return
 
-    logger.info(f"Starting bot — only responding to user ID {user_id}")
+    logger.info(f"Starting bot — user ID {user_id}, default provider: {config.get('default_provider', 'anthropic')}")
 
     app = Application.builder().token(token).build()
+    app.bot_data["config"] = config
 
     user_filter = make_allowed_filter(user_id)
 
-    app.add_handler(CommandHandler("start", start_handler,   filters=user_filter))
-    app.add_handler(CommandHandler("help",  start_handler,   filters=user_filter))
-    app.add_handler(CommandHandler("clear", clear_handler,   filters=user_filter))
+    app.add_handler(CommandHandler("start",    start_handler,    filters=user_filter))
+    app.add_handler(CommandHandler("help",     start_handler,    filters=user_filter))
+    app.add_handler(CommandHandler("clear",    clear_handler,    filters=user_filter))
+    app.add_handler(CommandHandler("provider", provider_handler, filters=user_filter))
+    app.add_handler(CallbackQueryHandler(provider_callback, pattern="^provider:"))
     app.add_handler(MessageHandler(filters.TEXT & user_filter, message_handler))
 
     logger.info("Bot is running. Press Ctrl+C to stop.")
