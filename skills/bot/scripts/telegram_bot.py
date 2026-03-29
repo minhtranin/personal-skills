@@ -104,8 +104,16 @@ PROVIDERS = {
 # System prompt
 # ---------------------------------------------------------------------------
 
-def build_system_prompt(cwd: str | None) -> str:
-    cwd_line = f"\nThe user's current working directory is: {cwd}" if cwd else ""
+def build_system_prompt(dirs: list[dict]) -> str:
+    if dirs:
+        dirs_text = "\n".join(
+            f"  - {d['path']}" + (f" ({d['label']})" if d.get('label') else "")
+            for d in dirs
+        )
+        dirs_section = f"\nThe user has added these codebase/knowledge directories:\n{dirs_text}\n\nWhen searching code or looking up knowledge, search ALL of these directories."
+    else:
+        dirs_section = ""
+
     return f"""You are a personal assistant with access to the user's personal-skills toolkit.
 You can help with:
 - Summarizing Slack threads
@@ -114,13 +122,13 @@ You can help with:
 - Summarizing Medium articles
 - Summarizing Jira issues
 - Running shell commands when needed
-{cwd_line}
+{dirs_section}
 
 When the user gives you a Slack/YouTube/Medium/Jira URL, use the run_script tool
 to execute the relevant Python script under ~/.local/share/personal-skills/scripts/.
 
-When the user asks to "lookup the codebase" or search code, use run_script to run
-grep, find, or cat commands against the working directory above.
+When the user asks to "lookup the codebase", "search code", or asks about implementation,
+use run_script to run grep, find, or cat commands against the directories listed above.
 
 Be concise and conversational — this is a mobile chat interface.
 For long outputs, summarize key points first, then offer details.
@@ -217,16 +225,22 @@ async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
     except ValueError as e:
         return f"❌ Provider error: {e}"
 
-    cwd = config.get("cwd")
+    dirs = config.get("dirs", [])
+    # migrate legacy single cwd
+    if not dirs and config.get("cwd"):
+        dirs = [{"path": config["cwd"]}]
 
     # Warn early if codebase query but no directory set
-    if looks_like_codebase_query(user_message) and not cwd:
+    if looks_like_codebase_query(user_message) and not dirs:
         return (
-            "⚠️ No codebase directory set.\n\n"
-            "Use `/cwd /path/to/your/repo` to point me at your project, then try again.\n\n"
-            "Example:\n`/cwd /home/minhcongtran/workspace/grapple/grapple-plus-api`"
+            "⚠️ No codebase/knowledge directory added.\n\n"
+            "Use `/adddir /path/to/repo` to add one, then try again.\n\n"
+            "Example:\n`/adddir /home/minhcongtran/workspace/grapple/grapple-plus-api`\n\n"
+            "Add multiple with optional labels:\n"
+            "`/adddir /path/to/repo My API`"
         )
-    system_prompt = build_system_prompt(cwd)
+
+    system_prompt = build_system_prompt(dirs)
 
     history = conversation_history.setdefault(chat_id, [])
     history.append({"role": "user", "content": user_message})
@@ -287,10 +301,13 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         config.get("default_provider", "anthropic")
     )
     provider_label = PROVIDERS.get(current, {}).get("label", current)
-    cwd = config.get("cwd", "(not set)")
+    dirs  = config.get("dirs", [])
+    if not dirs and config.get("cwd"):
+        dirs = [{"path": config["cwd"]}]
+    dirs_text = f"{len(dirs)} director{'y' if len(dirs)==1 else 'ies'}" if dirs else "none"
     await update.message.reply_text(
         "👋 *personal-skills bot*\n\n"
-        f"Provider: *{provider_label}* · Codebase: `{cwd}`\n\n"
+        f"Provider: *{provider_label}* · Dirs: {dirs_text}\n\n"
         "*ps: skills*\n"
         "`/slack_summary <url>` — summarize Slack thread\n"
         "`/slack_answer <url>` — research + draft reply\n"
@@ -300,9 +317,12 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "`/jira_plantask <KEY>` — plan + break into subtasks\n"
         "`/excalidraw <desc>` — generate diagram\n"
         "`/web` — launch history web UI\n\n"
+        "*Directories*\n"
+        "`/adddir /path [label]` — add codebase/knowledge dir\n"
+        "`/listdirs` — list all directories\n"
+        "`/removedir <n>` — remove directory by number\n\n"
         "*Settings*\n"
         "`/provider` — switch AI provider\n"
-        "`/cwd /path/to/repo` — set codebase directory\n"
         "`/clear` — reset conversation\n\n"
         "Or just send any message to chat freely.",
         parse_mode="Markdown"
@@ -356,26 +376,111 @@ async def provider_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def cwd_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    config = context.bot_data.get("config", {})
+async def adddir_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    config    = context.bot_data.get("config", {})
     args_text = " ".join(context.args).strip() if context.args else ""
 
     if not args_text:
-        current = config.get("cwd", "(not set)")
         await update.message.reply_text(
-            f"Current codebase directory: `{current}`\n\nSet it with:\n`/cwd /path/to/your/repo`",
+            "Usage: `/adddir /path/to/repo [optional label]`\n\n"
+            "Examples:\n"
+            "`/adddir /home/minhcongtran/workspace/grapple/grapple-plus-api`\n"
+            "`/adddir /home/minhcongtran/workspace/grapple/grapple-frontend Frontend`\n"
+            "`/adddir /home/minhcongtran/docs/knowledge Knowledge Base`",
             parse_mode="Markdown"
         )
         return
 
-    path = Path(args_text).expanduser()
+    # Split: first token is path, rest is label
+    parts = args_text.split(None, 1)
+    raw_path = parts[0]
+    label    = parts[1] if len(parts) > 1 else ""
+
+    path = Path(raw_path).expanduser()
     if not path.exists():
-        await update.message.reply_text(f"❌ Path does not exist: `{args_text}`", parse_mode="Markdown")
+        await update.message.reply_text(f"❌ Path does not exist: `{raw_path}`", parse_mode="Markdown")
         return
 
-    config["cwd"] = str(path)
+    dirs = config.get("dirs", [])
+    # migrate legacy cwd
+    if not dirs and config.get("cwd"):
+        dirs = [{"path": config["cwd"]}]
+        del config["cwd"]
+
+    # Avoid duplicates
+    path_str = str(path)
+    if any(d["path"] == path_str for d in dirs):
+        await update.message.reply_text(f"Already added: `{path_str}`", parse_mode="Markdown")
+        return
+
+    entry = {"path": path_str}
+    if label:
+        entry["label"] = label
+    dirs.append(entry)
+    config["dirs"] = dirs
     save_config(config)
-    await update.message.reply_text(f"✓ Codebase directory set to:\n`{path}`", parse_mode="Markdown")
+
+    label_part = f" *({label})*" if label else ""
+    await update.message.reply_text(
+        f"✓ Added{label_part}:\n`{path_str}`\n\nTotal directories: {len(dirs)}",
+        parse_mode="Markdown"
+    )
+
+
+async def listdirs_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    config = context.bot_data.get("config", {})
+    dirs   = config.get("dirs", [])
+    if not dirs and config.get("cwd"):
+        dirs = [{"path": config["cwd"]}]
+
+    if not dirs:
+        await update.message.reply_text(
+            "No directories added yet.\nUse `/adddir /path/to/repo` to add one.",
+            parse_mode="Markdown"
+        )
+        return
+
+    lines = ["*Codebase/knowledge directories:*\n"]
+    for i, d in enumerate(dirs, 1):
+        label = f" — {d['label']}" if d.get("label") else ""
+        lines.append(f"{i}. `{d['path']}`{label}")
+    lines.append(f"\nUse `/removedir <number>` to remove one.")
+    await update.message.reply_text("\n".join(lines), parse_mode="Markdown")
+
+
+async def removedir_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    config    = context.bot_data.get("config", {})
+    args_text = " ".join(context.args).strip() if context.args else ""
+    dirs      = config.get("dirs", [])
+    if not dirs and config.get("cwd"):
+        dirs = [{"path": config["cwd"]}]
+        del config["cwd"]
+
+    if not args_text:
+        await update.message.reply_text(
+            "Usage: `/removedir <number>`\nRun `/listdirs` to see numbers.",
+            parse_mode="Markdown"
+        )
+        return
+
+    try:
+        idx = int(args_text) - 1
+        if idx < 0 or idx >= len(dirs):
+            raise ValueError
+    except ValueError:
+        await update.message.reply_text(
+            f"❌ Invalid number. Run `/listdirs` to see valid numbers.",
+            parse_mode="Markdown"
+        )
+        return
+
+    removed = dirs.pop(idx)
+    config["dirs"] = dirs
+    save_config(config)
+    await update.message.reply_text(
+        f"✓ Removed: `{removed['path']}`\nRemaining: {len(dirs)} director{'y' if len(dirs)==1 else 'ies'}",
+        parse_mode="Markdown"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -523,7 +628,8 @@ def main():
     parser.add_argument("--minimax-key",      help="MiniMax API key")
     parser.add_argument("--zai-key",          help="ZAI API key")
     parser.add_argument("--anthropic-key",    help="Anthropic API key")
-    parser.add_argument("--cwd",              help="Default codebase directory for code lookups")
+    parser.add_argument("--add-dir",          action="append", metavar="PATH[:LABEL]",
+                        help="Add a codebase/knowledge directory (repeatable)")
     args = parser.parse_args()
 
     config = load_config()
@@ -546,8 +652,18 @@ def main():
 
         if args.default_provider:
             config["default_provider"] = args.default_provider
-        if args.cwd:
-            config["cwd"] = str(Path(args.cwd).expanduser())
+        if args.add_dir:
+            dirs = config.get("dirs", [])
+            for entry in args.add_dir:
+                parts    = entry.split(":", 1)
+                path_str = str(Path(parts[0]).expanduser())
+                label    = parts[1] if len(parts) > 1 else ""
+                if not any(d["path"] == path_str for d in dirs):
+                    d = {"path": path_str}
+                    if label:
+                        d["label"] = label
+                    dirs.append(d)
+            config["dirs"] = dirs
 
         # Store provider API keys
         providers_cfg = config.setdefault("providers", {})
@@ -579,9 +695,11 @@ def main():
 
     app.add_handler(CommandHandler("start",    start_handler,    filters=user_filter))
     app.add_handler(CommandHandler("help",     start_handler,    filters=user_filter))
-    app.add_handler(CommandHandler("clear",    clear_handler,    filters=user_filter))
-    app.add_handler(CommandHandler("provider", provider_handler, filters=user_filter))
-    app.add_handler(CommandHandler("cwd",      cwd_handler,      filters=user_filter))
+    app.add_handler(CommandHandler("clear",     clear_handler,     filters=user_filter))
+    app.add_handler(CommandHandler("provider",  provider_handler,  filters=user_filter))
+    app.add_handler(CommandHandler("adddir",    adddir_handler,    filters=user_filter))
+    app.add_handler(CommandHandler("listdirs",  listdirs_handler,  filters=user_filter))
+    app.add_handler(CommandHandler("removedir", removedir_handler, filters=user_filter))
 
     # Register all ps: skill commands
     for skill in PS_COMMANDS.values():
@@ -598,7 +716,9 @@ def main():
             BotCommand("help",           "Show help"),
             BotCommand("clear",          "Reset conversation history"),
             BotCommand("provider",       "Switch AI provider (MiniMax/ZAI/Anthropic)"),
-            BotCommand("cwd",            "Set codebase directory for code lookups"),
+            BotCommand("adddir",         "Add a codebase or knowledge directory"),
+            BotCommand("listdirs",       "List all added directories"),
+            BotCommand("removedir",      "Remove a directory by number"),
             BotCommand("slack_summary",  "Summarize a Slack thread"),
             BotCommand("slack_answer",   "Research codebase and draft Slack reply"),
             BotCommand("tube_summary",   "Summarize a YouTube video"),
