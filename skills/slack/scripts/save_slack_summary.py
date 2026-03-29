@@ -25,6 +25,7 @@ def main():
     parser.add_argument("--key-points",   default="")
     parser.add_argument("--participants", default="")
     parser.add_argument("--reply-count",  default="0")
+    parser.add_argument("--diagram-png",  default="")
     parser.add_argument("--data-dir",     default=str(DEFAULT_DATA_DIR))
     args = parser.parse_args()
 
@@ -43,6 +44,7 @@ def main():
         "key_points":   args.key_points,
         "participants": args.participants,
         "reply_count":  args.reply_count,
+        "diagram_png":  args.diagram_png,
         "date":         now,
     }
 

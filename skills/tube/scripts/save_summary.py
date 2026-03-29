@@ -29,6 +29,7 @@ def main():
     parser.add_argument("--summary", default="")
     parser.add_argument("--key-points", default="")
     parser.add_argument("--transcript", default="")
+    parser.add_argument("--diagram-png", default="")
     parser.add_argument("--data-dir", default=str(DEFAULT_DATA_DIR))
     args = parser.parse_args()
 
@@ -46,6 +47,7 @@ def main():
         "summary": args.summary,
         "key_points": args.key_points,
         "transcript": args.transcript,
+        "diagram_png": args.diagram_png,
         "date": now,
     }
     summary_file = data_dir / f"{video_id}.json"

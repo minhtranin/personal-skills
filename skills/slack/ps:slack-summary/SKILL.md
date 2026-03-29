@@ -55,23 +55,7 @@ Using the parent message and all replies, produce:
 2. **Key Points** — 5–10 bullets: important decisions, action items, open questions, notable reactions.
 3. **Participants** — list who contributed and their main position/role in the discussion.
 
-## Step 5 — Save
-
-Extract thread ID from URL (channel + timestamp parts):
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py" \
-  --thread-id "<CHANNEL_ID>_<THREAD_TS>" \
-  --url "<URL>" \
-  --channel "<CHANNEL_NAME>" \
-  --parent-text "<PARENT_MESSAGE_FIRST_200_CHARS>" \
-  --summary "<AI_SUMMARY>" \
-  --key-points "<KEY_POINTS>" \
-  --participants "<COMMA_SEPARATED_NAMES>" \
-  --reply-count "<COUNT>"
-```
-
-## Step 6 — Optional diagram (skip silently if unavailable)
+## Step 5 — Optional diagram (skip silently if unavailable)
 
 ```bash
 python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
@@ -84,7 +68,24 @@ python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excal
   /tmp/slack_diagram.excalidraw --output /tmp/slack_diagram.png 2>/dev/null
 ```
 
-If PNG was created, display it with the Read tool. If anything fails, skip silently.
+If PNG was created, display it with the Read tool. Set `DIAGRAM_PNG=/tmp/slack_diagram.png`, otherwise `DIAGRAM_PNG=""`. If anything fails, skip silently.
+
+## Step 6 — Save
+
+Extract thread ID from URL (channel + timestamp parts):
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py" \
+  --thread-id "<CHANNEL_ID>_<THREAD_TS>" \
+  --url "<URL>" \
+  --channel "<CHANNEL_NAME>" \
+  --parent-text "<PARENT_MESSAGE_FIRST_200_CHARS>" \
+  --summary "<AI_SUMMARY>" \
+  --key-points "<KEY_POINTS>" \
+  --participants "<COMMA_SEPARATED_NAMES>" \
+  --reply-count "<COUNT>" \
+  --diagram-png "$DIAGRAM_PNG"
+```
 
 ## Step 7 — Output
 

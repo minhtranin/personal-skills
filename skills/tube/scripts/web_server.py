@@ -13,7 +13,7 @@ from pathlib import Path
 import shutil
 
 try:
-    from flask import Flask, render_template_string, abort, request, redirect, url_for
+    from flask import Flask, render_template_string, abort, request, redirect, url_for, send_file
 except ImportError:
     print("ERROR: flask is not installed. Run: pip install flask", file=sys.stderr)
     sys.exit(2)
@@ -220,6 +220,15 @@ DETAIL_TEMPLATE = """<!DOCTYPE html>
   </div>
   {% endif %}
 
+  {% if data.get('diagram_png') %}
+  <div class="section">
+    <h3>Diagram</h3>
+    <img src="/diagram?path={{ data.diagram_png | urlencode }}"
+         style="max-width:100%;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.10);"
+         alt="diagram" />
+  </div>
+  {% endif %}
+
   {% if data.transcript or data.text %}
   <div class="section">
     <h3>{{ 'Transcript' if data.transcript else 'Full Text' }}</h3>
@@ -328,6 +337,20 @@ def slack_detail(thread_id: str):
     if data is None:
         abort(404)
     return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/slack")
+
+
+# ---------------------------------------------------------------------------
+# Diagram image route
+# ---------------------------------------------------------------------------
+
+@app.route("/diagram")
+def serve_diagram():
+    from flask import request as req
+    path = req.args.get("path", "")
+    p = Path(path)
+    if not p.exists() or p.suffix.lower() not in (".png", ".jpg", ".jpeg", ".gif"):
+        abort(404)
+    return send_file(str(p), mimetype="image/png")
 
 
 # ---------------------------------------------------------------------------

@@ -76,19 +76,7 @@ Using the transcript (or video description if no transcript was available), prod
 1. **Summary** — 3–5 sentence overview: what the video is about, the main argument, and the conclusion.
 2. **Key Points** — bulleted list of 5–10 concrete takeaways or facts.
 
-## Step 7 — Save to history
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
-  --video-id "<VIDEO_ID>" \
-  --url "<URL>" \
-  --title "<TITLE>" \
-  --summary "<SUMMARY_TEXT>" \
-  --key-points "<KEY_POINTS_TEXT>" \
-  --transcript "<TRANSCRIPT_FIRST_4000_CHARS>"
-```
-
-## Step 8 — Optional diagram (skip silently if unavailable)
+## Step 7 — Optional diagram (skip silently if unavailable)
 
 ```bash
 python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
@@ -101,8 +89,21 @@ python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excal
   /tmp/tube_diagram.excalidraw --output /tmp/tube_diagram.png 2>/dev/null
 ```
 
-If PNG was created, display it with the Read tool. If anything fails, skip silently.
+If PNG was created, display it with the Read tool. Set `DIAGRAM_PNG=/tmp/tube_diagram.png`, otherwise `DIAGRAM_PNG=""`. If anything fails, skip silently.
+
+## Step 8 — Save to history
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
+  --video-id "<VIDEO_ID>" \
+  --url "<URL>" \
+  --title "<TITLE>" \
+  --summary "<SUMMARY_TEXT>" \
+  --key-points "<KEY_POINTS_TEXT>" \
+  --transcript "<TRANSCRIPT_FIRST_4000_CHARS>" \
+  --diagram-png "$DIAGRAM_PNG"
+```
 
 ## Step 9 — Output to user
 
-Present the summary and key points in clean markdown. Mention they can browse all history with `/ps-web`.
+Present the summary and key points in clean markdown. Mention they can browse all history with `/ps:web`.

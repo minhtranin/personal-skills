@@ -26,6 +26,7 @@ def main():
     parser.add_argument("--summary", default="")         # AI-generated summary
     parser.add_argument("--key-points", default="")
     parser.add_argument("--description", default="")
+    parser.add_argument("--diagram-png", default="")
     parser.add_argument("--data-dir", default=str(DEFAULT_DATA_DIR))
     args = parser.parse_args()
 
@@ -46,6 +47,7 @@ def main():
         "summary": args.summary,
         "key_points": args.key_points,
         "description": args.description[:4000],
+        "diagram_png": args.diagram_png,
         "date": now,
     }
 

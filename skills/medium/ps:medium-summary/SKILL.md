@@ -53,22 +53,7 @@ Using the article `text`, produce:
 1. **Summary** — 3–5 sentence overview: the problem being solved, the approach, and the conclusion.
 2. **Key Points** — bulleted list of 5–10 concrete takeaways (include code snippets or commands if relevant).
 
-## Step 4 — Save to history
-
-Extract slug from the URL (the last path segment, e.g. `nesti-got-tired-...-da01328b3345`).
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
-  --slug "<SLUG>" \
-  --url "<URL>" \
-  --title "<TITLE>" \
-  --author "<AUTHOR>" \
-  --summary "<SUMMARY_TEXT>" \
-  --key-points "<KEY_POINTS_TEXT>" \
-  --text "<ARTICLE_TEXT_FIRST_4000_CHARS>"
-```
-
-## Step 5 — Optional diagram (skip silently if unavailable)
+## Step 4 — Optional diagram (skip silently if unavailable)
 
 ```bash
 python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
@@ -81,8 +66,24 @@ python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excal
   /tmp/medium_diagram.excalidraw --output /tmp/medium_diagram.png 2>/dev/null
 ```
 
-If PNG was created, display it with the Read tool. If anything fails, skip silently.
+If PNG was created, display it with the Read tool. Set `DIAGRAM_PNG=/tmp/medium_diagram.png`, otherwise `DIAGRAM_PNG=""`. If anything fails, skip silently.
+
+## Step 5 — Save to history
+
+Extract slug from the URL (the last path segment, e.g. `nesti-got-tired-...-da01328b3345`).
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
+  --slug "<SLUG>" \
+  --url "<URL>" \
+  --title "<TITLE>" \
+  --author "<AUTHOR>" \
+  --summary "<SUMMARY_TEXT>" \
+  --key-points "<KEY_POINTS_TEXT>" \
+  --text "<ARTICLE_TEXT_FIRST_4000_CHARS>" \
+  --diagram-png "$DIAGRAM_PNG"
+```
 
 ## Step 6 — Output to user
 
-Present the title, author, summary and key points in clean markdown. Mention they can browse all history with `/ps-web`.
+Present the title, author, summary and key points in clean markdown. Mention they can browse all history with `/ps:web`.

@@ -52,18 +52,7 @@ Using `description` + all `comments`:
 2. **Key Points** — 5–10 bullets: problem, decisions, blockers, next steps.
 3. **Comment Highlights** — if >3 comments, call out 2–3 most significant ones.
 
-## Step 5 — Save
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
-  --key "<KEY>" --url "<URL>" --issue-summary "<TITLE>" \
-  --type "<TYPE>" --status "<STATUS>" \
-  --reporter "<REPORTER>" --assignee "<ASSIGNEE>" \
-  --summary "<AI_SUMMARY>" --key-points "<KEY_POINTS>" \
-  --description "<DESCRIPTION_FIRST_4000_CHARS>"
-```
-
-## Step 6 — Optional diagram (skip silently if unavailable)
+## Step 5 — Optional diagram (skip silently if unavailable)
 
 ```bash
 python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
@@ -76,7 +65,19 @@ python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excal
   /tmp/jira_diagram.excalidraw --output /tmp/jira_diagram.png 2>/dev/null
 ```
 
-If PNG was created, display it with the Read tool. If anything fails, skip silently.
+If PNG was created (`/tmp/jira_diagram.png` exists), display it with the Read tool. Set `DIAGRAM_PNG=/tmp/jira_diagram.png`, otherwise set `DIAGRAM_PNG=""`. If anything fails, skip silently and set `DIAGRAM_PNG=""`.
+
+## Step 6 — Save
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
+  --key "<KEY>" --url "<URL>" --issue-summary "<TITLE>" \
+  --type "<TYPE>" --status "<STATUS>" \
+  --reporter "<REPORTER>" --assignee "<ASSIGNEE>" \
+  --summary "<AI_SUMMARY>" --key-points "<KEY_POINTS>" \
+  --description "<DESCRIPTION_FIRST_4000_CHARS>" \
+  --diagram-png "$DIAGRAM_PNG"
+```
 
 ## Step 7 — Output
 
@@ -94,4 +95,4 @@ If PNG was created, display it with the Read tool. If anything fails, skip silen
 ...
 ```
 
-Mention they can browse history with `/ps-web`.
+Mention they can browse history with `/ps:web`.
