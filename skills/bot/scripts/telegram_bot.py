@@ -156,6 +156,9 @@ TOOLS = [
 ]
 
 
+TOOL_OUTPUT_LIMIT = 8_000  # max chars per tool result to keep context sane
+
+
 def run_tool(command: str) -> str:
     try:
         result = subprocess.run(
@@ -169,7 +172,10 @@ def run_tool(command: str) -> str:
         output = result.stdout
         if result.stderr:
             output += f"\n[stderr]: {result.stderr[:500]}"
-        return output.strip() or "(no output)"
+        output = output.strip() or "(no output)"
+        if len(output) > TOOL_OUTPUT_LIMIT:
+            output = output[:TOOL_OUTPUT_LIMIT] + f"\n... [truncated — {len(output)} chars total]"
+        return output
     except subprocess.TimeoutExpired:
         return "ERROR: Command timed out after 120s"
     except Exception as e:
@@ -204,6 +210,92 @@ def build_client(provider_name: str, config: dict) -> tuple[anthropic.Anthropic,
     client = anthropic.Anthropic(**kwargs)
     model  = provider["models"][provider["default_model"]]
     return client, model
+
+
+# ---------------------------------------------------------------------------
+# Context management
+# ---------------------------------------------------------------------------
+
+MAX_CONTEXT_CHARS = 40_000   # ~10k tokens — safe for all providers
+COMPACT_TARGET    = 20_000   # compact down to this size
+RECENT_KEEP       = 4        # always keep last N message pairs untouched
+
+
+def estimate_chars(messages: list[dict]) -> int:
+    """Rough character count of all message content."""
+    total = 0
+    for m in messages:
+        c = m.get("content", "")
+        if isinstance(c, str):
+            total += len(c)
+        elif isinstance(c, list):
+            for block in c:
+                if isinstance(block, dict):
+                    total += len(str(block.get("text", "") or block.get("content", "")))
+                else:
+                    total += len(str(block))
+    return total
+
+
+def compact_history(history: list[dict], client: anthropic.Anthropic, model: str) -> list[dict]:
+    """
+    When history is too large:
+    1. Take everything except the last RECENT_KEEP pairs
+    2. Ask Claude to summarize it into a single context message
+    3. Replace old messages with [summary_message] + recent messages
+    """
+    if len(history) <= RECENT_KEEP * 2:
+        return history
+
+    split        = len(history) - (RECENT_KEEP * 2)
+    old_messages = history[:split]
+    recent       = history[split:]
+
+    # Build a plain-text digest of old messages for summarization
+    digest_parts = []
+    for m in old_messages:
+        role = m.get("role", "")
+        c    = m.get("content", "")
+        if isinstance(c, list):
+            text = " ".join(
+                b.get("text", "") or b.get("content", "")
+                for b in c if isinstance(b, dict)
+            )
+        else:
+            text = str(c)
+        # Truncate each message to 800 chars to keep digest manageable
+        digest_parts.append(f"[{role}]: {text[:800]}")
+
+    digest = "\n\n".join(digest_parts)
+
+    try:
+        summary_resp = client.messages.create(
+            model=model,
+            max_tokens=512,
+            messages=[{
+                "role": "user",
+                "content": (
+                    "Summarize this conversation history in 3-5 sentences, "
+                    "keeping all key facts, decisions, URLs, and action items:\n\n"
+                    f"{digest}"
+                )
+            }]
+        )
+        summary_text = summary_resp.content[0].text if summary_resp.content else "(summary unavailable)"
+    except Exception as e:
+        logger.warning(f"Context compaction failed: {e} — truncating instead")
+        return recent
+
+    logger.info(f"Compacted {len(old_messages)} messages into summary")
+    summary_message = {
+        "role":    "user",
+        "content": f"[Earlier conversation summary]\n{summary_text}",
+    }
+    ack_message = {
+        "role":    "assistant",
+        "content": "Understood, I have the context from earlier.",
+    }
+    return [summary_message, ack_message] + recent
 
 
 CODEBASE_KEYWORDS = (
@@ -244,8 +336,12 @@ async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
 
     history = conversation_history.setdefault(chat_id, [])
     history.append({"role": "user", "content": user_message})
-    if len(history) > 20:
-        history[:] = history[-20:]
+
+    # Auto-compact if context is too large
+    if estimate_chars(history) > MAX_CONTEXT_CHARS:
+        logger.info(f"Context too large ({estimate_chars(history)} chars) — compacting...")
+        history[:] = compact_history(history, client, model)
+        logger.info(f"After compact: {estimate_chars(history)} chars, {len(history)} messages")
 
     messages = list(history)
 
