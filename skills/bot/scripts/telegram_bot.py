@@ -198,6 +198,17 @@ def build_client(provider_name: str, config: dict) -> tuple[anthropic.Anthropic,
     return client, model
 
 
+CODEBASE_KEYWORDS = (
+    "codebase", "lookup", "source code", "search code", "find in code",
+    "grep", "repo", "repository", "source", "implementation", "where is",
+    "which file", "find the", "look at the code",
+)
+
+def looks_like_codebase_query(text: str) -> bool:
+    t = text.lower()
+    return any(kw in t for kw in CODEBASE_KEYWORDS)
+
+
 async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
     provider_name = active_provider.get(chat_id, config.get("default_provider", "anthropic"))
 
@@ -207,6 +218,14 @@ async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
         return f"❌ Provider error: {e}"
 
     cwd = config.get("cwd")
+
+    # Warn early if codebase query but no directory set
+    if looks_like_codebase_query(user_message) and not cwd:
+        return (
+            "⚠️ No codebase directory set.\n\n"
+            "Use `/cwd /path/to/your/repo` to point me at your project, then try again.\n\n"
+            "Example:\n`/cwd /home/minhcongtran/workspace/grapple/grapple-plus-api`"
+        )
     system_prompt = build_system_prompt(cwd)
 
     history = conversation_history.setdefault(chat_id, [])
