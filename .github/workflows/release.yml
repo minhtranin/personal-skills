@@ -17,7 +17,7 @@ jobs:
       - name: Verify VERSION file matches tag
         run: |
           FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
-          TAG_VERSION="${GITHUB_REF_NAME}"
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
           if [ "$FILE_VERSION" != "$TAG_VERSION" ]; then
             echo "ERROR: VERSION file ($FILE_VERSION) does not match tag ($TAG_VERSION)"
             echo "Update the VERSION file before tagging."
