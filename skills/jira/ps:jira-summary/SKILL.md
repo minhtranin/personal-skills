@@ -52,34 +52,7 @@ Using `description` + all `comments`:
 2. **Key Points** — 5–10 bullets: problem, decisions, blockers, next steps.
 3. **Comment Highlights** — if >3 comments, call out 2–3 most significant ones.
 
-## Step 5 — Optional diagram (skip silently if unavailable)
-
-```bash
-python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
-```
-
-If `ok`: generate a status-flow diagram — issue title as central box, reporter → assignee as actors, current status badge, 2–3 key points as connected nodes. Write to `/tmp/jira_diagram.excalidraw`, then:
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
-  /tmp/jira_diagram.excalidraw --output /tmp/jira_diagram.png 2>/dev/null
-```
-
-If PNG was created (`/tmp/jira_diagram.png` exists), display it with the Read tool. Set `DIAGRAM_PNG=/tmp/jira_diagram.png`, otherwise set `DIAGRAM_PNG=""`. If anything fails, skip silently and set `DIAGRAM_PNG=""`.
-
-## Step 6 — Save
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
-  --key "<KEY>" --url "<URL>" --issue-summary "<TITLE>" \
-  --type "<TYPE>" --status "<STATUS>" \
-  --reporter "<REPORTER>" --assignee "<ASSIGNEE>" \
-  --summary "<AI_SUMMARY>" --key-points "<KEY_POINTS>" \
-  --description "<DESCRIPTION_FIRST_4000_CHARS>" \
-  --diagram-png "$DIAGRAM_PNG"
-```
-
-## Step 7 — Output
+## Step 5 — Output immediately
 
 ```
 ## PROJ-123 — <title>
@@ -95,4 +68,44 @@ python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
 ...
 ```
 
-Mention they can browse history with `/ps:web`.
+Then on a new line: *"Browse history with `/ps:web`. Want a diagram for this? (y/n)"*
+
+## Step 6 — Save (run immediately, do not wait for diagram)
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
+  --key "<KEY>" --url "<URL>" --issue-summary "<TITLE>" \
+  --type "<TYPE>" --status "<STATUS>" \
+  --reporter "<REPORTER>" --assignee "<ASSIGNEE>" \
+  --summary "<AI_SUMMARY>" --key-points "<KEY_POINTS>" \
+  --description "<DESCRIPTION_FIRST_4000_CHARS>"
+```
+
+## Step 7 — Diagram (only if user says yes)
+
+If the user replies `y` or `yes`:
+
+```bash
+python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
+```
+
+If `skip`: tell the user to install playwright (`pip3 install playwright && python3 -m playwright install chromium`) and stop.
+
+If `ok`: generate a status-flow diagram — issue title as central box, reporter → assignee as actors, current status badge, 2–3 key points as connected nodes. Write to `/tmp/jira_diagram.excalidraw`, render:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
+  /tmp/jira_diagram.excalidraw --output /tmp/jira_diagram.png
+```
+
+Display PNG with the Read tool. Then update the saved entry:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
+  --key "<KEY>" --url "<URL>" --issue-summary "<TITLE>" \
+  --type "<TYPE>" --status "<STATUS>" \
+  --reporter "<REPORTER>" --assignee "<ASSIGNEE>" \
+  --summary "<AI_SUMMARY>" --key-points "<KEY_POINTS>" \
+  --description "<DESCRIPTION_FIRST_4000_CHARS>" \
+  --diagram-png "/tmp/jira_diagram.png"
+```

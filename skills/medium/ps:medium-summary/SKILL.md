@@ -53,22 +53,13 @@ Using the article `text`, produce:
 1. **Summary** — 3–5 sentence overview: the problem being solved, the approach, and the conclusion.
 2. **Key Points** — bulleted list of 5–10 concrete takeaways (include code snippets or commands if relevant).
 
-## Step 4 — Optional diagram (skip silently if unavailable)
+## Step 4 — Output to user immediately
 
-```bash
-python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
-```
+Present the title, author, summary and key points in clean markdown.
 
-If `ok`: generate a concept map — article title as central box, key points as connected leaf nodes grouped by theme. Write to `/tmp/medium_diagram.excalidraw`, then:
+Then on a new line: *"Browse all history with `/ps:web`. Want a diagram for this? (y/n)"*
 
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
-  /tmp/medium_diagram.excalidraw --output /tmp/medium_diagram.png 2>/dev/null
-```
-
-If PNG was created, display it with the Read tool. Set `DIAGRAM_PNG=/tmp/medium_diagram.png`, otherwise `DIAGRAM_PNG=""`. If anything fails, skip silently.
-
-## Step 5 — Save to history
+## Step 5 — Save to history (run immediately, do not wait for diagram)
 
 Extract slug from the URL (the last path segment, e.g. `nesti-got-tired-...-da01328b3345`).
 
@@ -80,10 +71,36 @@ python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
   --author "<AUTHOR>" \
   --summary "<SUMMARY_TEXT>" \
   --key-points "<KEY_POINTS_TEXT>" \
-  --text "<ARTICLE_TEXT_FIRST_4000_CHARS>" \
-  --diagram-png "$DIAGRAM_PNG"
+  --text "<ARTICLE_TEXT_FIRST_4000_CHARS>"
 ```
 
-## Step 6 — Output to user
+## Step 6 — Diagram (only if user says yes)
 
-Present the title, author, summary and key points in clean markdown. Mention they can browse all history with `/ps:web`.
+If the user replies `y` or `yes`:
+
+```bash
+python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
+```
+
+If `skip`: tell the user playwright is not installed and stop.
+
+If `ok`: generate a concept map — article title as central box, key points as connected leaf nodes grouped by theme. Write to `/tmp/medium_diagram.excalidraw`, render:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
+  /tmp/medium_diagram.excalidraw --output /tmp/medium_diagram.png
+```
+
+Display PNG with the Read tool. Then update the saved entry with the diagram path:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
+  --slug "<SLUG>" \
+  --url "<URL>" \
+  --title "<TITLE>" \
+  --author "<AUTHOR>" \
+  --summary "<SUMMARY_TEXT>" \
+  --key-points "<KEY_POINTS_TEXT>" \
+  --text "<ARTICLE_TEXT_FIRST_4000_CHARS>" \
+  --diagram-png "/tmp/medium_diagram.png"
+```

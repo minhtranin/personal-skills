@@ -76,22 +76,42 @@ Using the transcript (or video description if no transcript was available), prod
 1. **Summary** — 3–5 sentence overview: what the video is about, the main argument, and the conclusion.
 2. **Key Points** — bulleted list of 5–10 concrete takeaways or facts.
 
-## Step 7 — Optional diagram (skip silently if unavailable)
+## Step 7 — Output to user immediately
+
+Present the summary and key points in clean markdown.
+
+Then on a new line: *"Browse all history with `/ps:web`. Want a diagram for this? (y/n)"*
+
+## Step 8 — Save to history (run immediately, do not wait for diagram)
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
+  --video-id "<VIDEO_ID>" \
+  --url "<URL>" \
+  --title "<TITLE>" \
+  --summary "<SUMMARY_TEXT>" \
+  --key-points "<KEY_POINTS_TEXT>" \
+  --transcript "<TRANSCRIPT_FIRST_4000_CHARS>"
+```
+
+## Step 9 — Diagram (only if user says yes)
+
+If the user replies `y` or `yes`:
 
 ```bash
 python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
 ```
 
-If `ok`: generate a concept map — video title as central box, key points as connected leaf nodes grouped by theme. Write to `/tmp/tube_diagram.excalidraw`, then:
+If `skip`: tell the user playwright is not installed and stop.
+
+If `ok`: generate a concept map — video title as central box, key points as connected leaf nodes grouped by theme. Write to `/tmp/tube_diagram.excalidraw`, render:
 
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
-  /tmp/tube_diagram.excalidraw --output /tmp/tube_diagram.png 2>/dev/null
+  /tmp/tube_diagram.excalidraw --output /tmp/tube_diagram.png
 ```
 
-If PNG was created, display it with the Read tool. Set `DIAGRAM_PNG=/tmp/tube_diagram.png`, otherwise `DIAGRAM_PNG=""`. If anything fails, skip silently.
-
-## Step 8 — Save to history
+Display PNG with the Read tool. Then update the saved entry with the diagram path:
 
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
@@ -101,9 +121,5 @@ python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
   --summary "<SUMMARY_TEXT>" \
   --key-points "<KEY_POINTS_TEXT>" \
   --transcript "<TRANSCRIPT_FIRST_4000_CHARS>" \
-  --diagram-png "$DIAGRAM_PNG"
+  --diagram-png "/tmp/tube_diagram.png"
 ```
-
-## Step 9 — Output to user
-
-Present the summary and key points in clean markdown. Mention they can browse all history with `/ps:web`.

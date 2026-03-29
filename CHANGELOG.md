@@ -7,11 +7,19 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-03-29
+
+### Changed
+- All summary skills now output result immediately before optional diagram step
+- User prompted: "Want a diagram for this? (y/n)" after each summary
+- Diagram is saved after display and updates the history entry with the PNG path
+- Web UI `/ps:web` now shows embedded diagrams on detail pages via `/diagram` route
+
 ## [0.3.0] - 2026-03-29
 
 ### Added
-- `/ps-excalidraw` — generate Excalidraw diagrams from a description and render to PNG via Playwright + headless Chromium
-- Optional diagram step in all summary skills (`/ps-tube-summary`, `/ps-medium-summary`, `/ps-jira-summary`, `/ps-slack-summary`) — silently skipped if `playwright` is not installed
+- `/ps:excalidraw` — generate Excalidraw diagrams from a description and render to PNG via Playwright + headless Chromium
+- Optional diagram step in all summary skills (`/ps:tube-summary`, `/ps:medium-summary`, `/ps:jira-summary`, `/ps:slack-summary`) — silently skipped if `playwright` is not installed
 - `render_excalidraw.py` + `render_template.html` renderer using `@excalidraw/excalidraw` ESM CDN
 - `setup.sh` for one-time Playwright + Chromium install
 - Fixed remote install to preserve subdirectory structure under `scripts/`
