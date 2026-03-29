@@ -581,6 +581,11 @@ def make_ps_handler(skill: dict):
                 await update.message.reply_text(chunk)
                 await asyncio.sleep(0.3)
 
+        # Keep history so follow-ups work
+        history = conversation_history.setdefault(chat_id, [])
+        history.append({"role": "user",      "content": prompt})
+        history.append({"role": "assistant", "content": reply})
+
     return handler
 
 
@@ -625,6 +630,11 @@ async def slack_post_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         typing_task.cancel()
 
     await update.message.reply_text(reply)
+
+    # Inject into conversation history so follow-ups like "post again with 'ok'" work
+    history = conversation_history.setdefault(chat_id, [])
+    history.append({"role": "user",      "content": f"/slack_post {channel} {message}"})
+    history.append({"role": "assistant", "content": reply})
 
 
 async def keep_typing(bot, chat_id: int, stop_event: asyncio.Event):
