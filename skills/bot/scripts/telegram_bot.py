@@ -413,6 +413,37 @@ def looks_like_codebase_query(text: str) -> bool:
     return any(kw in t for kw in CODEBASE_KEYWORDS)
 
 
+# Error patterns that indicate the context is too large
+CONTEXT_TOO_LONG_PATTERNS = (
+    "prompt is too long",
+    "context length",
+    "context_length",
+    "maximum context",
+    "token limit",
+    "too many tokens",
+    "request too large",
+    "content too large",
+    "max_tokens",
+    "input is too long",
+    "exceeds the model",
+)
+
+HARD_MAX_CHARS = 60_000  # absolute hard cap — forcefully drop if above this even after compact
+
+
+def is_context_too_long_error(error: Exception) -> bool:
+    """Check if an API error is about context being too long."""
+    msg = str(error).lower()
+    return any(pat in msg for pat in CONTEXT_TOO_LONG_PATTERNS)
+
+
+def emergency_truncate(messages: list[dict]) -> list[dict]:
+    """Last resort — keep only the most recent messages until under hard cap."""
+    while len(messages) > 2 and estimate_chars(messages) > HARD_MAX_CHARS:
+        messages.pop(0)
+    return messages
+
+
 async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
     provider_name = active_provider.get(chat_id, config.get("default_provider", "anthropic"))
 
@@ -441,22 +472,52 @@ async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
     history = conversation_history.setdefault(chat_id, [])
     history.append({"role": "user", "content": user_message})
 
-    # Auto-compact if context is too large (Claude Code–style: tool outputs first, then summarize)
+    # Pre-emptive compact if context is too large
     if estimate_chars(history) > MAX_CONTEXT_CHARS:
         logger.info(f"Context too large ({estimate_chars(history)} chars) — compacting...")
         history[:] = compact_history(history, client, model, chat_id)
         logger.info(f"After compact: {estimate_chars(history)} chars, {len(history)} messages")
 
+    # Hard cap safety net
+    if estimate_chars(history) > HARD_MAX_CHARS:
+        logger.warning(f"Still too large after compact ({estimate_chars(history)} chars) — emergency truncating")
+        history[:] = emergency_truncate(history)
+
     messages = list(history)
 
-    for _ in range(10):
-        response = client.messages.create(
-            model=model,
-            max_tokens=4096,
-            system=system_prompt,
-            tools=TOOLS,
-            messages=messages,
-        )
+    for round_num in range(10):
+        try:
+            response = client.messages.create(
+                model=model,
+                max_tokens=4096,
+                system=system_prompt,
+                tools=TOOLS,
+                messages=messages,
+            )
+        except Exception as api_err:
+            if is_context_too_long_error(api_err):
+                logger.warning(f"Context too long error from API (round {round_num}): {api_err}")
+
+                # Try compact + retry once
+                if round_num == 0:
+                    history[:] = compact_history(history, client, model, chat_id)
+                    if estimate_chars(history) > HARD_MAX_CHARS:
+                        history[:] = emergency_truncate(history)
+                    messages = list(history)
+                    logger.info(f"Retrying after emergency compact: {estimate_chars(history)} chars")
+                    continue
+                else:
+                    # Already retried — hard truncate and try one last time
+                    history[:] = emergency_truncate(history)
+                    messages = list(history)
+                    if round_num <= 1:
+                        continue
+                    return (
+                        "❌ Context is still too large after compaction.\n"
+                        "Use `/clear` to reset and start a new conversation."
+                    )
+            else:
+                raise  # re-raise non-context errors
 
         text_parts = [b.text for b in response.content if hasattr(b, "text")]
 
@@ -479,6 +540,14 @@ async def ask_ai(chat_id: int, user_message: str, config: dict) -> str:
                     })
             messages.append({"role": "assistant", "content": response.content})
             messages.append({"role": "user",      "content": tool_results})
+
+            # Check if messages grew too large during tool loop
+            if estimate_chars(messages) > MAX_CONTEXT_CHARS:
+                logger.info(f"Context grew during tool loop ({estimate_chars(messages)} chars) — stripping tool outputs")
+                messages = strip_tool_outputs(messages)
+                if estimate_chars(messages) > HARD_MAX_CHARS:
+                    messages = emergency_truncate(messages)
+
             continue
 
         break
