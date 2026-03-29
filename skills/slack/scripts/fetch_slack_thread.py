@@ -48,13 +48,33 @@ def load_tokens() -> tuple[str, str]:
     sys.exit(1)
 
 
-def slack_get(method: str, params: dict, token: str, cookie: str) -> dict:
-    qs = urllib.parse.urlencode(params)
-    url = f"https://slack.com/api/{method}?{qs}"
-    req = urllib.request.Request(url, headers={
-        "Authorization": token,
-        "Cookie": f"d={cookie}",
-    })
+def slack_post(method: str, params: dict, token: str, cookie: str, workspace_domain: str = "") -> dict:
+    """Post to Slack API using multipart/form-data with token in body (matches browser behaviour)."""
+    base = f"https://{workspace_domain}/api" if workspace_domain else "https://slack.com/api"
+    url = f"{base}/{method}"
+
+    # Build multipart form body
+    boundary = "----WebKitFormBoundaryPersonalSkills"
+    body_parts = []
+    fields = dict(params)
+    fields["token"] = token
+    for key, value in fields.items():
+        body_parts.append(
+            f"------{boundary[6:]}\r\n"
+            f'Content-Disposition: form-data; name="{key}"\r\n\r\n'
+            f"{value}\r\n"
+        )
+    body = ("".join(body_parts) + f"------{boundary[6:]}--\r\n").encode()
+
+    req = urllib.request.Request(
+        url,
+        data=body,
+        headers={
+            "Content-Type": f"multipart/form-data; boundary=----{boundary[6:]}",
+            "Cookie": f"d={cookie}",
+            "User-Agent": "Mozilla/5.0",
+        },
+    )
     try:
         with urllib.request.urlopen(req, timeout=20) as r:
             data = json.loads(r.read())
@@ -74,6 +94,10 @@ def slack_get(method: str, params: dict, token: str, cookie: str) -> dict:
         sys.exit(2)
 
     return data
+
+
+# Keep old name as alias
+slack_get = slack_post
 
 
 # ---------------------------------------------------------------------------
@@ -108,21 +132,21 @@ def parse_slack_url(url: str) -> tuple[str, str]:
 # Fetch helpers
 # ---------------------------------------------------------------------------
 
-def get_channel_name(channel_id: str, token: str, cookie: str) -> str:
+def get_channel_name(channel_id: str, token: str, cookie: str, domain: str = "") -> str:
     try:
-        data = slack_get("conversations.info", {"channel": channel_id}, token, cookie)
+        data = slack_post("conversations.info", {"channel": channel_id}, token, cookie, domain)
         ch = data.get("channel", {})
         return ch.get("name") or ch.get("name_normalized") or channel_id
     except SystemExit:
         return channel_id
 
 
-def resolve_users(user_ids: set, token: str, cookie: str) -> dict[str, str]:
+def resolve_users(user_ids: set, token: str, cookie: str, domain: str = "") -> dict[str, str]:
     """Returns {user_id: display_name}."""
     names = {}
     for uid in user_ids:
         try:
-            data = slack_get("users.info", {"user": uid}, token, cookie)
+            data = slack_post("users.info", {"user": uid}, token, cookie, domain)
             u = data.get("user", {})
             profile = u.get("profile", {})
             name = (profile.get("display_name")
@@ -149,13 +173,24 @@ def format_message(msg: dict, user_names: dict) -> dict:
 # Main
 # ---------------------------------------------------------------------------
 
+def workspace_domain_from_url(url: str) -> str:
+    """Extract workspace domain e.g. 'grapplefund.slack.com' from a Slack URL."""
+    m = re.match(r"https?://([a-z0-9-]+\.slack\.com)", url)
+    return m.group(1) if m else ""
+
+
 def main():
     if len(sys.argv) < 2:
         print("Usage: fetch_slack_thread.py <slack-thread-url>", file=sys.stderr)
         sys.exit(1)
 
+    slack_url = sys.argv[1]
     token, cookie = load_tokens()
-    channel_id, thread_ts = parse_slack_url(sys.argv[1])
+    channel_id, thread_ts = parse_slack_url(slack_url)
+    domain = workspace_domain_from_url(slack_url)
+
+    def api(method, params):
+        return slack_post(method, params, token, cookie, domain)
 
     # Fetch all replies (paginated)
     replies = []
@@ -164,7 +199,7 @@ def main():
         params = {"channel": channel_id, "ts": thread_ts, "limit": 200}
         if cursor:
             params["cursor"] = cursor
-        data = slack_get("conversations.replies", params, token, cookie)
+        data = api("conversations.replies", params)
         messages = data.get("messages", [])
         replies.extend(messages)
         meta = data.get("response_metadata", {})
@@ -186,8 +221,8 @@ def main():
         if uid:
             user_ids.add(uid)
 
-    user_names = resolve_users(user_ids, token, cookie)
-    channel_name = get_channel_name(channel_id, token, cookie)
+    user_names = resolve_users(user_ids, token, cookie, domain)
+    channel_name = get_channel_name(channel_id, token, cookie, domain)
 
     print(json.dumps({
         "channel_id":   channel_id,
