@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-03-29
+
+### Added
+- `/ps:slack-login` now starts a local token extraction server on port 5051 — visit http://localhost:5051 in a browser logged into Slack to auto-extract xoxc + xoxd tokens (no manual DevTools copy/paste needed)
+
 ## [0.3.1] - 2026-03-29
 
 ### Changed

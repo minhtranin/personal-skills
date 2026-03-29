@@ -1,56 +1,43 @@
 ---
 name: ps:slack-login
-description: Save Slack tokens (xoxc + xoxd) so other Slack skills can authenticate. Use when the user runs /ps-slack-login or needs to set up Slack credentials.
+description: Save Slack tokens (xoxc + xoxd) so other Slack skills can authenticate. Use when the user runs /ps:slack-login or needs to set up Slack credentials.
 argument-hint: [--token xoxc-... --cookie xoxd-...]
-allowed-tools: [Bash, Read, Write]
+allowed-tools: [Bash, Read]
 ---
 
 # Slack Token Setup
 
 **Arguments:** $ARGUMENTS
 
-If `--token` and `--cookie` are already present in the arguments, skip to Step 2.
+If `--token` and `--cookie` are already present in the arguments, skip to Step 3.
 
-## Step 1 — Obtain tokens from Slack
+## Step 1 — Start token extraction server
+
+Start the local token server on port 5051:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/tube/web_server.py" --slack-tokens
+```
+
+Keep it running. Do NOT press Ctrl+C yet.
+
+## Step 2 — Instructions for user
 
 Tell the user:
 
-> To use Slack skills, you need two session tokens from the Slack desktop app or web app.
-> Here's how to get them:
->
-> **In Slack Desktop (Windows/Mac/Linux):**
-> 1. Open Slack and press **F12** (or Cmd+Option+I on Mac) to open DevTools
-> 2. Go to the **Application** tab → **Cookies** → `https://app.slack.com`
-> 3. Find the cookie named **`d`** — copy its **Value** (starts with `xoxd-`)
-> 4. Go to the **Network** tab, filter by `XHR`, send any message or click around
-> 5. Click any `api` request → **Headers** → find `Authorization: xoxc-...`
-> 6. Copy that token value (starts with `xoxc-`)
->
-> **In Slack Web (browser):**
-> 1. Open `https://app.slack.com` and press **F12**
-> 2. Same steps as above
+> 1. Keep the token server running in the background
+> 2. Open **Chrome/Edge** and go to **https://app.slack.com** — make sure you're logged in to your workspace
+> 3. In the same browser, open a new tab and visit: **http://localhost:5051**
+> 4. Click **"Extract Tokens"** — the page will grab xoxc and xoxd from your Slack session
+> 5. Come back here and say "done" so I can verify the tokens were saved
 
-Then ask the user to provide both values:
+Wait for the user to say "done" or confirm the tokens were extracted.
 
-```
-Please paste your xoxc token:
-```
-
-Wait for xoxc token, then:
-
-```
-Please paste your xoxd cookie value (the value of the 'd' cookie):
-```
-
-Wait for xoxd value.
-
-## Step 2 — Save tokens
+## Step 3 — Verify tokens
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_tokens.py" \
-  --token "<XOXC_TOKEN>" \
-  --cookie "<XOXD_VALUE>"
+bash "$HOME/.local/share/personal-skills/scripts/slack/check_slack_tokens.sh"
 ```
 
-- **Exit 0:** Tell user: "Tokens saved and validated successfully! You can now use `/ps-slack-summary`."
-- **Exit 1:** Show the error and ask the user to double-check they copied the correct values.
+- **Exit 0:** Tell user: "Tokens saved and validated! You can now use `/ps:slack-summary`."
+- **Exit 1:** Show the printed error and stop.

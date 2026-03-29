@@ -354,6 +354,135 @@ def serve_diagram():
 
 
 # ---------------------------------------------------------------------------
+# Slack token extraction server (separate port 5051)
+# ---------------------------------------------------------------------------
+
+def run_token_server():
+    from flask import Flask, request, jsonify, render_template_string
+    import json
+    from pathlib import Path
+
+    TOKENS_FILE = Path.home() / ".local/share/personal-skills/slack-tokens.json"
+    TOKENS_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    TOKEN_PAGE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Slack Token Extractor — personal-skills</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; max-width: 600px; margin: 60px auto; padding: 0 20px; color: #222; }
+    h1 { font-size: 22px; }
+    .box { border: 1px solid #ddd; border-radius: 8px; padding: 24px; margin: 20px 0; background: #f9f9f9; }
+    .box p { margin: 8px 0; font-size: 14px; }
+    .token-preview { font-family: monospace; font-size: 12px; background: #eee; padding: 6px 10px; border-radius: 4px; word-break: break-all; margin: 6px 0; }
+    .btn { background: #4a154b; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; cursor: pointer; margin-top: 16px; }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .status { margin-top: 16px; padding: 12px; border-radius: 6px; font-size: 14px; display: none; }
+    .status.ok { background: #d4edda; color: #155724; display: block; }
+    .status.err { background: #f8d7da; color: #721c24; display: block; }
+    .note { font-size: 12px; color: #888; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Slack Token Extractor</h1>
+  <p>Extract your Slack session tokens for personal-skills.</p>
+
+  <div class="box">
+    <p><strong>1.</strong> Open <strong>app.slack.com</strong> in this browser and log in</p>
+    <p><strong>2.</strong> Come back here and click <strong>Extract Tokens</strong></p>
+    <p><strong>3.</strong> Tokens saved to <code>~/.local/share/personal-skills/slack-tokens.json</code></p>
+  </div>
+
+  <div class="box" id="preview-box" style="display:none">
+    <p><strong>xoxc token:</strong></p>
+    <div class="token-preview" id="xoxc-preview">—</div>
+    <p><strong>xoxd cookie:</strong></p>
+    <div class="token-preview" id="xoxd-preview">—</div>
+  </div>
+
+  <button class="btn" id="extract-btn" onclick="extractTokens()">Extract Tokens</button>
+
+  <div class="status" id="status"></div>
+  <p class="note">Tokens never leave your machine.</p>
+
+  <script>
+    function extractTokens() {
+      const btn = document.getElementById("extract-btn");
+      btn.disabled = true; btn.textContent = "Extracting...";
+
+      let xoxc = null, xoxd = null;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith("xoxc_")) { xoxc = localStorage.getItem(key); break; }
+      }
+      const cookies = document.cookie.split(";");
+      for (const c of cookies) {
+        const [k, v] = c.trim().split("=");
+        if (k === "d") xoxd = v;
+      }
+
+      if (!xoxc) {
+        document.getElementById("status").className = "status err";
+        document.getElementById("status").textContent = "xoxc token not found. Make sure you're logged into Slack in this browser, then reload and try again.";
+        btn.disabled = false; btn.textContent = "Extract Tokens";
+        return;
+      }
+
+      document.getElementById("preview-box").style.display = "block";
+      document.getElementById("xoxc-preview").textContent = xoxc.slice(0, 40) + "...";
+      document.getElementById("xoxd-preview").textContent = xoxd ? xoxd.slice(0, 40) + "..." : "(not found)";
+
+      fetch("/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: xoxc, d: xoxd })
+      })
+      .then(r => r.json())
+      .then(data => {
+        const s = document.getElementById("status");
+        if (data.ok) {
+          s.className = "status ok"; s.textContent = "✓ Tokens saved! You can now use /ps:slack-summary.";
+        } else {
+          s.className = "status err"; s.textContent = "Error: " + (data.error || "unknown");
+        }
+        btn.disabled = false; btn.textContent = "Extract Tokens";
+      })
+      .catch(err => {
+        const s = document.getElementById("status");
+        s.className = "status err"; s.textContent = "Network error: " + err.message;
+        btn.disabled = false; btn.textContent = "Extract Tokens";
+      });
+    }
+  </script>
+</body>
+</html>"""
+
+    token_app = Flask(__name__)
+
+    @token_app.route("/")
+    def token_page():
+        return render_template_string(TOKEN_PAGE)
+
+    @token_app.route("/save", methods=["POST"])
+    def save_tokens():
+        try:
+            data = request.get_json()
+            if not data or not data.get("token"):
+                return jsonify({"ok": False, "error": "Missing token"}), 400
+            tokens = {"token": data["token"], "d": data.get("d", "")}
+            TOKENS_FILE.write_text(json.dumps(tokens, ensure_ascii=False, indent=2))
+            return jsonify({"ok": True})
+        except Exception as e:
+            return jsonify({"ok": False, "error": str(e)}), 500
+
+    print("Slack token extraction server: http://localhost:5051")
+    print("Open http://localhost:5051 in your browser while logged into Slack.")
+    token_app.run(host="127.0.0.1", port=5051, debug=False, use_reloader=False)
+
+
+# ---------------------------------------------------------------------------
 # Clear routes
 # ---------------------------------------------------------------------------
 
@@ -418,7 +547,13 @@ def clear_execute(scope: str):
 def main():
     parser = argparse.ArgumentParser(description="personal-skills history server")
     parser.add_argument("--port", type=int, default=5050)
+    parser.add_argument("--slack-tokens", action="store_true",
+                        help="Start Slack token extraction server on port 5051")
     args = parser.parse_args()
+
+    if args.slack_tokens:
+        run_token_server()
+        return
 
     print(f"Starting personal-skills server on http://localhost:{args.port}")
     print(f"YouTube history : {YOUTUBE_DIR}")
