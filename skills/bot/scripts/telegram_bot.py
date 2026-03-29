@@ -311,6 +311,7 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "*ps: skills*\n"
         "`/slack_summary <url>` — summarize Slack thread\n"
         "`/slack_answer <url>` — research + draft reply\n"
+        "`/slack_post <channel> <msg>` — post new message to Slack\n"
         "`/tube_summary <url>` — summarize YouTube video\n"
         "`/medium_summary <url>` — summarize Medium article\n"
         "`/jira_summary <KEY>` — summarize Jira issue\n"
@@ -536,6 +537,12 @@ PS_COMMANDS = {
         "desc":  "Launch the personal-skills history web UI",
         "prompt": "Launch the personal-skills web UI history server",
     },
+    "slack_post": {
+        "cmd":   "slack_post",
+        "usage": "/slack_post <channel-url-or-id> <message>",
+        "desc":  "Post a new message to a Slack channel or DM",
+        "prompt": "",  # handled by dedicated handler below
+    },
 }
 
 
@@ -575,6 +582,48 @@ def make_ps_handler(skill: dict):
                 await asyncio.sleep(0.3)
 
     return handler
+
+
+async def slack_post_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id   = update.effective_chat.id
+    args_text = " ".join(context.args).strip() if context.args else ""
+
+    if not args_text or len(args_text.split(None, 1)) < 2:
+        await update.message.reply_text(
+            "Usage: `/slack_post <channel> <message>`\n\n"
+            "Examples:\n"
+            "`/slack_post #general hello team!`\n"
+            "`/slack_post https://grapplefund.slack.com/archives/D01T8UKQ7QA hi there`\n"
+            "`/slack_post C1234567 quick update: deploy is done`",
+            parse_mode="Markdown"
+        )
+        return
+
+    parts   = args_text.split(None, 1)
+    channel = parts[0]
+    message = parts[1]
+
+    # Escape message for shell
+    safe_message = message.replace("'", "'\\''")
+    safe_channel = channel.replace("'", "'\\''")
+
+    stop_typing = asyncio.Event()
+    typing_task = asyncio.create_task(keep_typing(context.bot, chat_id, stop_typing))
+
+    try:
+        result = run_tool(
+            f"python3 '$HOME/.local/share/personal-skills/scripts/slack/post_slack_message.py' "
+            f"--to '{safe_channel}' --message '{safe_message}'"
+        )
+        if result.startswith("ERROR"):
+            reply = f"❌ {result}"
+        else:
+            reply = f"✓ {result}"
+    finally:
+        stop_typing.set()
+        typing_task.cancel()
+
+    await update.message.reply_text(reply)
 
 
 async def keep_typing(bot, chat_id: int, stop_event: asyncio.Event):
@@ -723,7 +772,10 @@ def main():
 
     # Register all ps: skill commands
     for skill in PS_COMMANDS.values():
-        app.add_handler(CommandHandler(skill["cmd"], make_ps_handler(skill), filters=user_filter))
+        if skill["cmd"] == "slack_post":
+            app.add_handler(CommandHandler("slack_post", slack_post_handler, filters=user_filter))
+        else:
+            app.add_handler(CommandHandler(skill["cmd"], make_ps_handler(skill), filters=user_filter))
 
     app.add_handler(CallbackQueryHandler(provider_callback, pattern="^provider:"))
     app.add_handler(MessageHandler(filters.TEXT & user_filter, message_handler))
@@ -747,6 +799,7 @@ def main():
             BotCommand("jira_plantask",  "Plan & break a Jira issue into subtasks"),
             BotCommand("excalidraw",     "Generate an Excalidraw diagram"),
             BotCommand("web",            "Launch history web UI"),
+            BotCommand("slack_post",     "Post a new message to a Slack channel or DM"),
         ]
         await app.bot.set_my_commands(commands)
         logger.info(f"Registered {len(commands)} bot commands with BotFather")
