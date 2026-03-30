@@ -157,7 +157,7 @@ for f in json.load(sys.stdin)['tree']:
     relpath=$(echo "$filepath" | sed "s|skills/$ns/scripts/||")
     destfile="$SCRIPTS_INSTALL_DIR/scripts/$ns/$relpath"
     mkdir -p "$(dirname "$destfile")"
-    curl -fsSL "$GITHUB_RAW/$filepath" -o "$destfile"
+    curl -fsSL --retry 3 --retry-delay 2 "$GITHUB_RAW/$filepath" -o "$destfile"
     echo "  ✓ scripts/$ns/$relpath"
   done
   find "$SCRIPTS_INSTALL_DIR/scripts" -name "*.sh" -exec chmod +x {} \;
@@ -195,7 +195,7 @@ for f in json.load(sys.stdin)['tree']:
 ")
     for filepath in $SKILL_PATHS; do
       skill_name=$(basename "$(dirname "$filepath")")
-      curl -fsSL "$GITHUB_RAW/$filepath" -o "$commands_dir/$skill_name.md"
+      curl -fsSL --retry 3 --retry-delay 2 "$GITHUB_RAW/$filepath" -o "$commands_dir/$skill_name.md"
       echo "  ✓ $agent_name: /$skill_name"
     done
   fi
