@@ -25,7 +25,7 @@ VERSION_FILE="$SCRIPTS_INSTALL_DIR/.version"
 
 # Agent commands directories
 CLAUDE_DIR="$HOME/.claude/commands"
-ANTIGRAVITY_DIR="$HOME/.antigravity/commands"
+ANTIGRAVITY_DIR="$HOME/.gemini/antigravity/global_skills"  # folder-per-skill structure
 OPENCODE_DIR="$HOME/.opencode/commands"
 
 # ── Parse args ───────────────────────────────────────────────────────────────
@@ -157,11 +157,12 @@ done
 echo ""
 echo "→ Installing skill commands..."
 
-install_skills() {
+# Install as flat .md files (Claude Code, OpenCode style)
+install_skills_flat() {
   local agent_name="$1"
   local commands_dir="$2"
 
-  [ -d "$(dirname "$commands_dir")" ] || return 0  # parent dir (agent root) doesn't exist — skip
+  [ -d "$(dirname "$commands_dir")" ] || return 0  # parent dir doesn't exist — skip
 
   mkdir -p "$commands_dir"
 
@@ -173,9 +174,27 @@ install_skills() {
   done
 }
 
-install_skills "Claude Code"  "$CLAUDE_DIR"
-install_skills "Antigravity"  "$ANTIGRAVITY_DIR"
-install_skills "OpenCode"     "$OPENCODE_DIR"
+# Install as folder-per-skill with SKILL.md (Antigravity global_skills style)
+install_skills_folder() {
+  local agent_name="$1"
+  local skills_dir="$2"
+
+  [ -d "$(dirname "$skills_dir")" ] || return 0  # parent dir doesn't exist — skip
+
+  mkdir -p "$skills_dir"
+
+  for skill_dir in "$REPO_ROOT"/skills/*/ps:*/; do
+    [ -f "$skill_dir/SKILL.md" ] || continue
+    skill_name="$(basename "$skill_dir")"
+    mkdir -p "$skills_dir/$skill_name"
+    cp "$skill_dir/SKILL.md" "$skills_dir/$skill_name/SKILL.md"
+    echo "  ✓ $agent_name: /$skill_name"
+  done
+}
+
+install_skills_flat   "Claude Code"  "$CLAUDE_DIR"
+install_skills_folder "Antigravity"  "$ANTIGRAVITY_DIR"
+install_skills_flat   "OpenCode"     "$OPENCODE_DIR"
 
 # ── 3. Save installed version ────────────────────────────────────────────────
 
