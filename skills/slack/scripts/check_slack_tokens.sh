@@ -10,6 +10,10 @@ TOKENS_FILE="$HOME/.local/share/personal-skills/slack-tokens.json"
 SCRIPTS_DIR="$HOME/.local/share/personal-skills/scripts/slack"
 
 # ── 1. Try auto-extract from Slack desktop app storage ─────────────────────────
+# Install deps needed for Linux cookie decryption (silent, best-effort)
+python3 -c "import secretstorage, Crypto" 2>/dev/null || \
+  pip3 install --quiet --break-system-packages secretstorage pycryptodome 2>/dev/null || true
+
 EXTRACT=$(python3 "$SCRIPTS_DIR/get_slack_tokens.py" 2>/dev/null)
 if [ $? -eq 0 ] && [ -n "$EXTRACT" ]; then
   mkdir -p "$(dirname "$TOKENS_FILE")"
