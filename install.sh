@@ -55,6 +55,7 @@ else
   MODE="remote"
   command -v curl    &>/dev/null || { echo "ERROR: curl is required.   sudo apt install curl  |  brew install curl";   exit 1; }
   command -v python3 &>/dev/null || { echo "ERROR: python3 is required. sudo apt install python3 | brew install python3"; exit 1; }
+  command -v unzip   &>/dev/null || { echo "ERROR: unzip is required.  sudo apt install unzip  |  brew install unzip";  exit 1; }
 fi
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -65,16 +66,6 @@ current_version() {
 
 latest_release_tag() {
   curl -fsSL "$GITHUB_API/releases/latest" | python3 -c "import sys,json; print(json.load(sys.stdin)['tag_name'])"
-}
-
-raw_base_for_ref() {
-  local ref="$1"
-  echo "https://raw.githubusercontent.com/$GITHUB_REPO/$ref"
-}
-
-tree_for_ref() {
-  local ref="$1"
-  curl -fsSL "$GITHUB_API/git/trees/$ref?recursive=1"
 }
 
 # ── --version-check ──────────────────────────────────────────────────────────
@@ -93,7 +84,7 @@ if $MODE_VERSION_CHECK; then
   exit 0
 fi
 
-# ── Resolve target ref ───────────────────────────────────────────────────────
+# ── Resolve target version ───────────────────────────────────────────────────
 
 if [ "$MODE" = "remote" ]; then
   if $MODE_UPDATE || [ -z "$TARGET_VERSION" ]; then
@@ -102,8 +93,6 @@ if [ "$MODE" = "remote" ]; then
     TARGET_VERSION="$(latest_release_tag)"
     echo "  Latest release: $TARGET_VERSION"
   fi
-  GITHUB_RAW="$(raw_base_for_ref "$TARGET_VERSION")"
-  GIT_REF="$TARGET_VERSION"
 fi
 
 # ── Banner ───────────────────────────────────────────────────────────────────
@@ -127,41 +116,41 @@ if $MODE_UPDATE && [ "$MODE" = "remote" ]; then
   echo ""
 fi
 
+# ── Download release zip (remote mode) ───────────────────────────────────────
+
+if [ "$MODE" = "remote" ]; then
+  TMPDIR_WORK="$(mktemp -d)"
+  trap 'rm -rf "$TMPDIR_WORK"' EXIT
+
+  ZIP_URL="https://github.com/$GITHUB_REPO/archive/refs/tags/$TARGET_VERSION.zip"
+  ZIP_FILE="$TMPDIR_WORK/release.zip"
+
+  echo "→ Downloading release $TARGET_VERSION..."
+  curl -fsSL --retry 3 --retry-delay 2 "$ZIP_URL" -o "$ZIP_FILE"
+
+  echo "→ Extracting..."
+  unzip -q "$ZIP_FILE" -d "$TMPDIR_WORK"
+
+  # The zip extracts to e.g. personal-skills-v0.4.3/ or personal-skills-0.4.3/
+  REPO_ROOT="$(find "$TMPDIR_WORK" -maxdepth 1 -type d -name "personal-skills-*" | head -1)"
+  if [ -z "$REPO_ROOT" ]; then
+    echo "ERROR: could not find extracted repo directory in zip"
+    exit 1
+  fi
+fi
+
 # ── 1. Install scripts ───────────────────────────────────────────────────────
 
 echo "→ Installing helper scripts..."
 
-if [ "$MODE" = "local" ]; then
-  for ns_dir in "$REPO_ROOT"/skills/*/; do
-    ns="$(basename "$ns_dir")"
-    [ -d "$ns_dir/scripts" ] || continue
-    mkdir -p "$SCRIPTS_INSTALL_DIR/scripts/$ns"
-    cp -r "$ns_dir/scripts"/. "$SCRIPTS_INSTALL_DIR/scripts/$ns/"
-    chmod +x "$SCRIPTS_INSTALL_DIR/scripts/$ns/"*.sh 2>/dev/null || true
-    echo "  ✓ scripts/$ns/"
-  done
-else
-  # Fetch tree once and reuse — avoids multiple API calls that can trigger GitHub rate limits
-  GIT_TREE="$(tree_for_ref "$GIT_REF")"
-
-  SCRIPT_PATHS=$(echo "$GIT_TREE" | python3 -c "
-import sys, json
-for f in json.load(sys.stdin)['tree']:
-    p = f['path']
-    if p.startswith('skills/') and '/scripts/' in p and f['type'] == 'blob':
-        print(p)
-")
-  for filepath in $SCRIPT_PATHS; do
-    ns=$(echo "$filepath" | cut -d'/' -f2)
-    # Preserve subdirectory structure under scripts/
-    relpath=$(echo "$filepath" | sed "s|skills/$ns/scripts/||")
-    destfile="$SCRIPTS_INSTALL_DIR/scripts/$ns/$relpath"
-    mkdir -p "$(dirname "$destfile")"
-    curl -fsSL --retry 3 --retry-delay 2 "$GITHUB_RAW/$filepath" -o "$destfile"
-    echo "  ✓ scripts/$ns/$relpath"
-  done
-  find "$SCRIPTS_INSTALL_DIR/scripts" -name "*.sh" -exec chmod +x {} \;
-fi
+for ns_dir in "$REPO_ROOT"/skills/*/; do
+  ns="$(basename "$ns_dir")"
+  [ -d "$ns_dir/scripts" ] || continue
+  mkdir -p "$SCRIPTS_INSTALL_DIR/scripts/$ns"
+  cp -r "$ns_dir/scripts"/. "$SCRIPTS_INSTALL_DIR/scripts/$ns/"
+  chmod +x "$SCRIPTS_INSTALL_DIR/scripts/$ns/"*.sh 2>/dev/null || true
+  echo "  ✓ scripts/$ns/"
+done
 
 # ── 2. Install SKILL.md files into each detected agent ───────────────────────
 
@@ -176,29 +165,12 @@ install_skills() {
 
   mkdir -p "$commands_dir"
 
-  if [ "$MODE" = "local" ]; then
-    for skill_dir in "$REPO_ROOT"/skills/*/ps:*/; do
-      [ -f "$skill_dir/SKILL.md" ] || continue
-      skill_name="$(basename "$skill_dir")"
-      cp "$skill_dir/SKILL.md" "$commands_dir/$skill_name.md"
-      echo "  ✓ $agent_name: /$skill_name"
-    done
-  else
-    SKILL_PATHS=$(echo "$GIT_TREE" | python3 -c "
-import sys, json
-for f in json.load(sys.stdin)['tree']:
-    p = f['path']
-    if p.endswith('SKILL.md') and f['type'] == 'blob':
-        skill_name = p.split('/')[-2]
-        if skill_name.startswith('ps:'):
-            print(p)
-")
-    for filepath in $SKILL_PATHS; do
-      skill_name=$(basename "$(dirname "$filepath")")
-      curl -fsSL --retry 3 --retry-delay 2 "$GITHUB_RAW/$filepath" -o "$commands_dir/$skill_name.md"
-      echo "  ✓ $agent_name: /$skill_name"
-    done
-  fi
+  for skill_dir in "$REPO_ROOT"/skills/*/ps:*/; do
+    [ -f "$skill_dir/SKILL.md" ] || continue
+    skill_name="$(basename "$skill_dir")"
+    cp "$skill_dir/SKILL.md" "$commands_dir/$skill_name.md"
+    echo "  ✓ $agent_name: /$skill_name"
+  done
 }
 
 install_skills "Claude Code"  "$CLAUDE_DIR"
