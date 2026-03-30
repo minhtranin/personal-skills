@@ -111,10 +111,10 @@ python3 "$HOME/.local/share/personal-skills/scripts/github/save_github_summary.p
 
 Check playwright:
 ```bash
-python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
+bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/dev/null && echo "ok" || echo "skip"
 ```
 
-If `skip`: tell user playwright is not installed and stop.
+If `skip`: tell user excalidraw deps are not installed and stop.
 
 If `ok`: Generate an Excalidraw concept map showing:
 - **Center box**: repo name + one-line description
@@ -127,8 +127,8 @@ If `ok`: Generate an Excalidraw concept map showing:
 Use `fontFamily: 2` (sans-serif). Write to `/tmp/github_diagram.excalidraw`, render:
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
-  /tmp/github_diagram.excalidraw --output /tmp/github_diagram.png --scale 2
+REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
+cd "$REFS" && uv run python render_excalidraw.py /tmp/github_diagram.excalidraw --output /tmp/github_diagram.png --scale 2
 ```
 
 Display PNG with the Read tool. Then update saved entry:

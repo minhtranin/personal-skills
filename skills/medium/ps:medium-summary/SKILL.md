@@ -79,16 +79,16 @@ python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
 If the user replies `y` or `yes`:
 
 ```bash
-python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
+bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/dev/null && echo "ok" || echo "skip"
 ```
 
-If `skip`: tell the user playwright is not installed and stop.
+If `skip`: tell the user excalidraw deps are not installed and stop.
 
 If `ok`: generate a concept map — article title as central box, key points as connected leaf nodes grouped by theme. Write to `/tmp/medium_diagram.excalidraw`, render:
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
-  /tmp/medium_diagram.excalidraw --output /tmp/medium_diagram.png
+REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
+cd "$REFS" && uv run python render_excalidraw.py /tmp/medium_diagram.excalidraw --output /tmp/medium_diagram.png
 ```
 
 Display PNG with the Read tool. Then update the saved entry with the diagram path:

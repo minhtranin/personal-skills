@@ -86,16 +86,16 @@ python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
 If the user replies `y` or `yes`:
 
 ```bash
-python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
+bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/dev/null && echo "ok" || echo "skip"
 ```
 
-If `skip`: tell the user to install playwright (`pip3 install playwright && python3 -m playwright install chromium`) and stop.
+If `skip`: tell the user excalidraw deps are not installed and stop.
 
 If `ok`: generate a status-flow diagram — issue title as central box, reporter → assignee as actors, current status badge, 2–3 key points as connected nodes. Write to `/tmp/jira_diagram.excalidraw`, render:
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
-  /tmp/jira_diagram.excalidraw --output /tmp/jira_diagram.png
+REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
+cd "$REFS" && uv run python render_excalidraw.py /tmp/jira_diagram.excalidraw --output /tmp/jira_diagram.png
 ```
 
 Display PNG with the Read tool. Then update the saved entry:

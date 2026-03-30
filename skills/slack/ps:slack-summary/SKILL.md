@@ -96,16 +96,16 @@ python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py"
 If the user replies `y` or `yes`:
 
 ```bash
-python3 -c "import playwright" 2>/dev/null && echo "ok" || echo "skip"
+bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/dev/null && echo "ok" || echo "skip"
 ```
 
-If `skip`: tell the user playwright is not installed and stop.
+If `skip`: tell the user excalidraw deps are not installed and stop.
 
 If `ok`: generate a participant interaction diagram — each participant as a node, arrows showing who replied to whom, topic as title box at top. Write to `/tmp/slack_diagram.excalidraw`, render:
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/tube/excalidraw/render_excalidraw.py" \
-  /tmp/slack_diagram.excalidraw --output /tmp/slack_diagram.png
+REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
+cd "$REFS" && uv run python render_excalidraw.py /tmp/slack_diagram.excalidraw --output /tmp/slack_diagram.png
 ```
 
 Display PNG with the Read tool. Then update the saved entry with the diagram path:

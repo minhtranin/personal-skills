@@ -40,6 +40,7 @@ skills/<namespace>/
 | `slack` | `/ps-slack-login`, `/ps-slack-summary` | Active |
 | `github` | `/ps:github-summary` | Active |
 | `frontend` | `/ps:frontend-ui` | Active |
+| `excalidraw` | `/ps:excalidraw` | Active |
 
 ## Adding a new skill namespace
 
@@ -67,6 +68,16 @@ skills/<namespace>/
 | `fetch_jira.py <key>` | Fetches issue + all comments via Jira REST API v3 |
 | `lookup_jira.py <key>` | History cache lookup for Jira issues |
 | `save_jira_summary.py` | Saves entry to `~/.jira-summary/` |
+
+### `excalidraw` namespace
+| Script | Purpose |
+|---|---|
+| `check_deps.sh` | Checks uv + playwright, installs if missing |
+| `references/render_excalidraw.py` | Renders `.excalidraw` JSON to PNG via Playwright |
+| `references/render_template.html` | HTML template used by the renderer |
+| `references/color-palette.md` | Brand colors and semantic color mapping |
+| `references/element-templates.md` | Copy-paste JSON templates for Excalidraw elements |
+| `references/pyproject.toml` | uv project config for playwright dependency |
 
 ### `slack` namespace
 | Script | Purpose |
