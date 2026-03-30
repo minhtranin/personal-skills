@@ -22,6 +22,7 @@ YOUTUBE_DIR = Path.home() / ".youtube-summary"
 MEDIUM_DIR  = Path.home() / ".medium-summary"
 JIRA_DIR    = Path.home() / ".jira-summary"
 SLACK_DIR   = Path.home() / ".slack-summary"
+GITHUB_DIR  = Path.home() / ".github-summary"
 
 # ---------------------------------------------------------------------------
 # Storage helpers
@@ -39,6 +40,21 @@ def load_entry(data_dir: Path, key: str) -> dict | None:
     if not f.exists():
         return None
     return json.loads(f.read_text(encoding="utf-8"))
+
+
+def load_github_index() -> list[dict]:
+    """GitHub uses one .json file per repo (no index.json)."""
+    if not GITHUB_DIR.exists():
+        return []
+    entries = []
+    for f in sorted(GITHUB_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+            data["_slug"] = f.stem
+            entries.append(data)
+        except Exception:
+            pass
+    return entries
 
 
 # ---------------------------------------------------------------------------
@@ -62,7 +78,8 @@ BASE_STYLE = """
   .badge-yt    { background: #fee2e2; color: #b91c1c; }
   .badge-med   { background: #e0f2fe; color: #0369a1; }
   .badge-jira  { background: #ede9fe; color: #6d28d9; }
-  .badge-slack { background: #fef3c7; color: #92400e; }
+  .badge-slack  { background: #fef3c7; color: #92400e; }
+  .badge-github { background: #f0fdf4; color: #15803d; }
   .card .snippet { font-size: 0.88rem; color: #555; line-height: 1.5; }
   .empty { text-align: center; color: #aaa; padding: 60px 0; font-size: 0.95rem; }
   .back { font-size: 0.88rem; margin-bottom: 1.5rem; }
@@ -91,6 +108,7 @@ NAV_TEMPLATE = """
   <a href="/" class="{{ 'active' if active == 'all' else '' }}">All ({{ total }})</a>
   <a href="/youtube" class="{{ 'active' if active == 'youtube' else '' }}">YouTube ({{ yt_count }})</a>
   <a href="/medium" class="{{ 'active' if active == 'medium' else '' }}">Medium ({{ med_count }})</a>
+  <a href="/github" class="{{ 'active' if active == 'github' else '' }}">GitHub ({{ gh_count }})</a>
   <a href="/jira" class="{{ 'active' if active == 'jira' else '' }}">Jira ({{ jira_count }})</a>
   <a href="/slack" class="{{ 'active' if active == 'slack' else '' }}">Slack ({{ slack_count }})</a>
   <span class="nav-right">
@@ -120,13 +138,17 @@ LIST_TEMPLATE = """<!DOCTYPE html>
         <span class="badge badge-med">Medium</span>
       {% elif item._type == 'slack' %}
         <span class="badge badge-slack">Slack</span>
+      {% elif item._type == 'github' %}
+        <span class="badge badge-github">GitHub</span>
       {% else %}
         <span class="badge badge-jira">Jira</span>
       {% endif %}
-      <h2>{{ item.get('key', '') }}{% if item.get('key') %} — {% endif %}{{ item.get('title') or item.get('issue_summary') or item.get('channel') or item.get('url') }}</h2>
+      <h2>{{ item.get('key', '') }}{% if item.get('key') %} — {% endif %}{{ item.get('full_name') or item.get('title') or item.get('issue_summary') or item.get('channel') or item.get('url') }}</h2>
       <div class="meta">
         {{ item.url }} &nbsp;·&nbsp; {{ item.date }}
         {% if item.get('author') %} &nbsp;·&nbsp; {{ item.author }}{% endif %}
+        {% if item.get('language') %} &nbsp;·&nbsp; {{ item.language }}{% endif %}
+        {% if item.get('stars') %} &nbsp;·&nbsp; ★ {{ item.stars }}{% endif %}
         {% if item.get('status') %} &nbsp;·&nbsp; {{ item.status }}{% endif %}
         {% if item.get('assignee') %} &nbsp;·&nbsp; {{ item.assignee }}{% endif %}
         {% if item.get('reply_count') %} &nbsp;·&nbsp; {{ item.reply_count }} replies{% endif %}
@@ -195,16 +217,32 @@ DETAIL_TEMPLATE = """<!DOCTYPE html>
   <div class="back"><a href="{{ back_url }}">&larr; Back</a></div>
   <div class="page-title">
     {% if data.get('key') %}<span style="color:#6d28d9">{{ data.key }}</span> — {% endif %}
-    {{ data.get('issue_summary') or data.get('title') or data.get('video_id') or data.get('slug') }}
+    {{ data.get('full_name') or data.get('issue_summary') or data.get('title') or data.get('video_id') or data.get('slug') }}
   </div>
   <div class="page-meta">
     <a href="{{ data.url }}" target="_blank" rel="noopener">{{ data.url }}</a>
     &nbsp;·&nbsp; {{ data.date }}
     {% if data.get('author') %} &nbsp;·&nbsp; by {{ data.author }}{% endif %}
+    {% if data.get('language') %} &nbsp;·&nbsp; {{ data.language }}{% endif %}
+    {% if data.get('stars') %} &nbsp;·&nbsp; ★ {{ data.stars }}{% endif %}
     {% if data.get('status') %} &nbsp;·&nbsp; <strong>{{ data.status }}</strong>{% endif %}
     {% if data.get('assignee') %} &nbsp;·&nbsp; {{ data.assignee }}{% endif %}
     {% if data.get('priority') %} &nbsp;·&nbsp; {{ data.priority }}{% endif %}
   </div>
+
+  {% if data.get('description') %}
+  <div class="section">
+    <h3>Description</h3>
+    <p>{{ data.description }}</p>
+  </div>
+  {% endif %}
+
+  {% if data.get('topics') %}
+  <div class="section">
+    <h3>Topics</h3>
+    <p>{{ data.topics }}</p>
+  </div>
+  {% endif %}
 
   {% if data.summary %}
   <div class="section">
@@ -246,12 +284,13 @@ app = Flask(__name__)
 
 
 def all_items():
-    yt    = [dict(e, _type="youtube", _detail_url=f"/youtube/{e['video_id']}") for e in load_index(YOUTUBE_DIR)]
-    med   = [dict(e, _type="medium",  _detail_url=f"/medium/{e['slug']}")      for e in load_index(MEDIUM_DIR)]
-    jira  = [dict(e, _type="jira",    _detail_url=f"/jira/{e['key']}")         for e in load_index(JIRA_DIR)]
-    slack = [dict(e, _type="slack",   _detail_url=f"/slack/{e['thread_id']}") for e in load_index(SLACK_DIR)]
-    combined = sorted(yt + med + jira + slack, key=lambda x: x.get("date", ""), reverse=True)
-    return combined, len(yt), len(med), len(jira), len(slack)
+    yt     = [dict(e, _type="youtube", _detail_url=f"/youtube/{e['video_id']}") for e in load_index(YOUTUBE_DIR)]
+    med    = [dict(e, _type="medium",  _detail_url=f"/medium/{e['slug']}")      for e in load_index(MEDIUM_DIR)]
+    jira   = [dict(e, _type="jira",    _detail_url=f"/jira/{e['key']}")         for e in load_index(JIRA_DIR)]
+    slack  = [dict(e, _type="slack",   _detail_url=f"/slack/{e['thread_id']}") for e in load_index(SLACK_DIR)]
+    github = [dict(e, _type="github",  _detail_url=f"/github/{e['_slug']}")    for e in load_github_index()]
+    combined = sorted(yt + med + jira + slack + github, key=lambda x: x.get("date", ""), reverse=True)
+    return combined, len(yt), len(med), len(jira), len(slack), len(github)
 
 
 def safe_key(key: str) -> str:
@@ -260,48 +299,57 @@ def safe_key(key: str) -> str:
     return key
 
 
-def nav_ctx(active, items, yt_count, med_count, jira_count, slack_count):
+def nav_ctx(active, items, yt_count, med_count, jira_count, slack_count, gh_count=0):
     return dict(active=active, total=len(items),
-                yt_count=yt_count, med_count=med_count, jira_count=jira_count, slack_count=slack_count)
+                yt_count=yt_count, med_count=med_count, jira_count=jira_count,
+                slack_count=slack_count, gh_count=gh_count)
 
 
 @app.route("/")
 def index():
-    items, yt_count, med_count, jira_count, slack_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
     return render_template_string(LIST_TEMPLATE, title="All Summaries", items=items,
-        **nav_ctx("all", items, yt_count, med_count, jira_count, slack_count))
+        **nav_ctx("all", items, yt_count, med_count, jira_count, slack_count, gh_count))
 
 
 @app.route("/youtube")
 def youtube_list():
-    items, yt_count, med_count, jira_count, slack_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
     yt_items = [i for i in items if i["_type"] == "youtube"]
     return render_template_string(LIST_TEMPLATE, title="YouTube Summaries", items=yt_items,
-        **nav_ctx("youtube", items, yt_count, med_count, jira_count, slack_count))
+        **nav_ctx("youtube", items, yt_count, med_count, jira_count, slack_count, gh_count))
 
 
 @app.route("/medium")
 def medium_list():
-    items, yt_count, med_count, jira_count, slack_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
     med_items = [i for i in items if i["_type"] == "medium"]
     return render_template_string(LIST_TEMPLATE, title="Medium Summaries", items=med_items,
-        **nav_ctx("medium", items, yt_count, med_count, jira_count, slack_count))
+        **nav_ctx("medium", items, yt_count, med_count, jira_count, slack_count, gh_count))
+
+
+@app.route("/github")
+def github_list():
+    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
+    gh_items = [i for i in items if i["_type"] == "github"]
+    return render_template_string(LIST_TEMPLATE, title="GitHub Summaries", items=gh_items,
+        **nav_ctx("github", items, yt_count, med_count, jira_count, slack_count, gh_count))
 
 
 @app.route("/jira")
 def jira_list():
-    items, yt_count, med_count, jira_count, slack_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
     jira_items = [i for i in items if i["_type"] == "jira"]
     return render_template_string(LIST_TEMPLATE, title="Jira Summaries", items=jira_items,
-        **nav_ctx("jira", items, yt_count, med_count, jira_count, slack_count))
+        **nav_ctx("jira", items, yt_count, med_count, jira_count, slack_count, gh_count))
 
 
 @app.route("/slack")
 def slack_list():
-    items, yt_count, med_count, jira_count, slack_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
     slack_items = [i for i in items if i["_type"] == "slack"]
     return render_template_string(LIST_TEMPLATE, title="Slack Summaries", items=slack_items,
-        **nav_ctx("slack", items, yt_count, med_count, jira_count, slack_count))
+        **nav_ctx("slack", items, yt_count, med_count, jira_count, slack_count, gh_count))
 
 
 @app.route("/youtube/<video_id>")
@@ -318,6 +366,17 @@ def medium_detail(slug: str):
     if data is None:
         abort(404)
     return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/medium")
+
+
+@app.route("/github/<path:slug>")
+def github_detail(slug: str):
+    safe = slug.replace("/", "__")
+    if not all(c.isalnum() or c in "-_." for c in safe):
+        abort(400)
+    data = load_entry(GITHUB_DIR, safe)
+    if data is None:
+        abort(404)
+    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/github")
 
 
 @app.route("/jira/<key>")
@@ -487,9 +546,10 @@ def run_token_server():
 # ---------------------------------------------------------------------------
 
 SCOPE_META = {
-    "all":     ("All",     [YOUTUBE_DIR, MEDIUM_DIR, JIRA_DIR, SLACK_DIR], "/"),
+    "all":     ("All",     [YOUTUBE_DIR, MEDIUM_DIR, JIRA_DIR, SLACK_DIR, GITHUB_DIR], "/"),
     "youtube": ("YouTube", [YOUTUBE_DIR], "/youtube"),
     "medium":  ("Medium",  [MEDIUM_DIR],  "/medium"),
+    "github":  ("GitHub",  [GITHUB_DIR],  "/github"),
     "jira":    ("Jira",    [JIRA_DIR],    "/jira"),
     "slack":   ("Slack",   [SLACK_DIR],   "/slack"),
 }
@@ -501,6 +561,8 @@ def _count_scope(dirs):
         idx = d / "index.json"
         if idx.exists():
             total += len(json.loads(idx.read_text(encoding="utf-8")))
+        elif d == GITHUB_DIR and d.exists():
+            total += len(list(d.glob("*.json")))
     return total
 
 
@@ -512,7 +574,7 @@ def _clear_scope(dirs):
 
 
 def _nav_ctx_empty():
-    return dict(active="all", total=0, yt_count=0, med_count=0, jira_count=0, slack_count=0)
+    return dict(active="all", total=0, yt_count=0, med_count=0, jira_count=0, slack_count=0, gh_count=0)
 
 
 @app.route("/clear", defaults={"scope": "all"})
@@ -523,8 +585,8 @@ def clear_confirm(scope: str):
     label, dirs, back_url = SCOPE_META[scope]
     count = _count_scope(dirs)
     path_hint = ", ".join(str(d) for d in dirs)
-    items, yt_count, med_count, jira_count, slack_count = all_items()
-    ctx = nav_ctx("all", items, yt_count, med_count, jira_count, slack_count)
+    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
+    ctx = nav_ctx("all", items, yt_count, med_count, jira_count, slack_count, gh_count)
     return render_template_string(CONFIRM_CLEAR_TEMPLATE,
         label=label, count=count, path=path_hint, scope=scope, back_url=back_url, **ctx)
 
@@ -535,8 +597,8 @@ def clear_execute(scope: str):
         abort(404)
     label, dirs, back_url = SCOPE_META[scope]
     _clear_scope(dirs)
-    items, yt_count, med_count, jira_count, slack_count = all_items()
-    ctx = nav_ctx("all", items, yt_count, med_count, jira_count, slack_count)
+    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
+    ctx = nav_ctx("all", items, yt_count, med_count, jira_count, slack_count, gh_count)
     return render_template_string(CLEARED_TEMPLATE, label=label, back_url=back_url, **ctx)
 
 
