@@ -7,6 +7,29 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-03-30
+
+### Added
+- `excalidraw` skill namespace — extracted from `tube` into its own standalone namespace (`skills/excalidraw/`)
+- `skills/excalidraw/ps:excalidraw/SKILL.md` — full rewrite using upstream [coleam00/excalidraw-diagram-skill](https://github.com/coleam00/excalidraw-diagram-skill): visual argument methodology, multi-zoom architecture, evidence artifacts, render-validate loop, section-by-section JSON strategy
+- `skills/excalidraw/scripts/check_deps.sh` — checks `uv` + `playwright`, installs if missing
+- `skills/excalidraw/scripts/references/` — `render_excalidraw.py`, `render_template.html`, `color-palette.md`, `element-templates.md`, `pyproject.toml`
+
+### Changed
+- All summary skills (`tube`, `medium`, `jira`, `slack`, `github`) migrated to new excalidraw renderer: `uv run python render_excalidraw.py` via `scripts/excalidraw/references/`
+- Playwright dependency check replaced with `check_deps.sh` in all summary skills
+- `tube/check_deps.sh`: `pip3` → `uv tool install` (yt-dlp), `uv pip install` (libs)
+- `bot/setup.sh`: `pip3 install` → `uv pip install`
+- `bot/telegram_bot.py`: install hints → `uv pip install`
+- `bot/ps:bot-telegram`: dep check and launch commands use `uv run --with`
+- `slack/check_slack_tokens.sh`: `pip3 install` → `uv pip install`
+- `tube/web_server.py`, `tube/get_transcript.sh`: install hints → `uv`
+
+### Removed
+- `skills/tube/ps:excalidraw/` — old excalidraw command (now in `skills/excalidraw/`)
+- `skills/tube/scripts/excalidraw/` — old renderer scripts (`render_excalidraw.py`, `render_template.html`, `setup.sh`)
+- `skills/tube/scripts/renderer/` — old node_modules-based renderer
+
 ## [0.3.3] - 2026-03-29
 
 ### Removed
