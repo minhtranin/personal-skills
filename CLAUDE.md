@@ -38,6 +38,8 @@ skills/<namespace>/
 | `medium` | `/ps-medium-summary` | Active |
 | `jira` | `/ps-jira-summary`, `/ps-jira-plantask` | Active |
 | `slack` | `/ps-slack-login`, `/ps-slack-summary` | Active |
+| `github` | `/ps:github-summary` | Active |
+| `frontend` | `/ps:frontend-ui` | Active |
 
 ## Adding a new skill namespace
 

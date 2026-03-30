@@ -20,7 +20,9 @@ curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/ins
 |---|---|
 | `/ps:bot-telegram` | Set up Telegram bot to chat with Claude from your phone |
 | `/ps:tube-summary <youtube-url>` | Summarize a YouTube video |
-| `/ps:medium-summary <medium-url>` | Summarize a Medium article |
+| `/ps:medium-summary <medium-url>` | Summarize a Medium article + optional diagram |
+| `/ps:github-summary <github-url>` | Summarize a GitHub repo — stack, architecture, activity + diagram |
+| `/ps:frontend-ui <brand-hex> [--warm\|--cool] [--dark] [--review]` | Generate premium CSS color token system (brand-tinted neutrals, shadows, card component) |
 | `/ps:jira-summary <PROJ-123>` | Summarize a Jira issue + comments |
 | `/ps:jira-plantask <PROJ-123>` | Plan implementation, break into subtasks, create in Jira |
 | `/ps:slack-summary <thread-url>` | Summarize a Slack thread |
