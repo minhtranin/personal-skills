@@ -24,7 +24,7 @@ SCRIPTS_INSTALL_DIR="$HOME/.local/share/personal-skills"
 VERSION_FILE="$SCRIPTS_INSTALL_DIR/.version"
 
 # Agent commands directories
-CLAUDE_DIR="$HOME/.claude/commands"
+CLAUDE_DIR="$HOME/.claude/skills"                          # folder-per-skill structure
 ANTIGRAVITY_DIR="$HOME/.gemini/antigravity/global_skills"  # folder-per-skill structure
 OPENCODE_DIR="$HOME/.opencode/commands"
 
@@ -192,7 +192,7 @@ install_skills_folder() {
   done
 }
 
-install_skills_flat   "Claude Code"  "$CLAUDE_DIR"
+install_skills_folder "Claude Code"  "$CLAUDE_DIR"
 install_skills_folder "Antigravity"  "$ANTIGRAVITY_DIR"
 install_skills_flat   "OpenCode"     "$OPENCODE_DIR"
 
