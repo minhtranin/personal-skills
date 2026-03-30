@@ -141,7 +141,10 @@ if [ "$MODE" = "local" ]; then
     echo "  ✓ scripts/$ns/"
   done
 else
-  SCRIPT_PATHS=$(tree_for_ref "$GIT_REF" | python3 -c "
+  # Fetch tree once and reuse — avoids multiple API calls that can trigger GitHub rate limits
+  GIT_TREE="$(tree_for_ref "$GIT_REF")"
+
+  SCRIPT_PATHS=$(echo "$GIT_TREE" | python3 -c "
 import sys, json
 for f in json.load(sys.stdin)['tree']:
     p = f['path']
@@ -181,7 +184,7 @@ install_skills() {
       echo "  ✓ $agent_name: /$skill_name"
     done
   else
-    SKILL_PATHS=$(tree_for_ref "$GIT_REF" | python3 -c "
+    SKILL_PATHS=$(echo "$GIT_TREE" | python3 -c "
 import sys, json
 for f in json.load(sys.stdin)['tree']:
     p = f['path']
