@@ -254,7 +254,20 @@ DETAIL_TEMPLATE = """<!DOCTYPE html>
   {% if data.key_points %}
   <div class="section">
     <h3>Key Points</h3>
-    <p>{{ data.key_points }}</p>
+    {% set pts = data.key_points.replace('\r\n', '\n') %}
+    {% if '|' in pts %}
+      {% set items = pts.split('|') %}
+    {% elif '\n' in pts %}
+      {% set items = pts.split('\n') %}
+    {% else %}
+      {% set items = [pts] %}
+    {% endif %}
+    <ul style="margin:0;padding-left:1.4em;line-height:1.8;font-size:0.93rem;color:#333">
+      {% for pt in items %}
+        {% set pt = pt.strip().lstrip('-•* ') %}
+        {% if pt %}<li>{{ pt }}</li>{% endif %}
+      {% endfor %}
+    </ul>
   </div>
   {% endif %}
 
