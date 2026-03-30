@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-03-30
+
+### Fixed
+- `ps:web`: key points now rendered as bullet list on detail pages — handles `|`-separated (GitHub), newline-separated (YouTube/Medium/etc.), and strips leading `-`/`•`/`*` chars
+
 ## [0.5.1] - 2026-03-30
 
 ### Added
