@@ -31,14 +31,14 @@ try:
     from telegram.constants import ChatAction
 except ImportError:
     print("ERROR: python-telegram-bot not installed.")
-    print("Run: pip3 install 'python-telegram-bot>=20.0'")
+    print("Run: uv pip install 'python-telegram-bot>=20.0'")
     sys.exit(2)
 
 try:
     import anthropic
 except ImportError:
     print("ERROR: anthropic SDK not installed.")
-    print("Run: pip3 install anthropic")
+    print("Run: uv pip install anthropic")
     sys.exit(2)
 
 # ---------------------------------------------------------------------------

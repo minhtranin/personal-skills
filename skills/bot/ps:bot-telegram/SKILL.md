@@ -32,7 +32,7 @@ ls "$HOME/.local/share/personal-skills/scripts/bot/telegram_bot.py" 2>/dev/null 
 ## Step 2 — Check dependencies
 
 ```bash
-python3 -c "import telegram; import anthropic; print('ok')" 2>/dev/null || echo "missing"
+uv run --with "python-telegram-bot>=20.0" --with anthropic python3 -c "import telegram; import anthropic; print('ok')" 2>/dev/null || echo "missing"
 ```
 
 If `missing`, install:
@@ -96,7 +96,8 @@ Paste your Telegram User ID here:
 Wait for the user ID. Then save config:
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/bot/telegram_bot.py" \
+uv run --with "python-telegram-bot>=20.0" --with anthropic \
+  python3 "$HOME/.local/share/personal-skills/scripts/bot/telegram_bot.py" \
   --token "<TOKEN>" \
   --user-id <USER_ID> \
   --setup
@@ -124,7 +125,8 @@ Stop here.
 If `stopped`, start in background:
 
 ```bash
-nohup python3 "$HOME/.local/share/personal-skills/scripts/bot/telegram_bot.py" \
+nohup uv run --with "python-telegram-bot>=20.0" --with anthropic \
+  python3 "$HOME/.local/share/personal-skills/scripts/bot/telegram_bot.py" \
   > "$HOME/.local/share/personal-skills/bot.log" 2>&1 &
 echo "PID: $!"
 ```

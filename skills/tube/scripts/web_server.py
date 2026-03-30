@@ -15,7 +15,7 @@ import shutil
 try:
     from flask import Flask, render_template_string, abort, request, redirect, url_for, send_file
 except ImportError:
-    print("ERROR: flask is not installed. Run: pip install flask", file=sys.stderr)
+    print("ERROR: flask is not installed. Run: uv pip install flask", file=sys.stderr)
     sys.exit(2)
 
 YOUTUBE_DIR = Path.home() / ".youtube-summary"

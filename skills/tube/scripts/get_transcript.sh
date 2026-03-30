@@ -14,7 +14,7 @@ fi
 # Check yt-dlp
 if ! command -v yt-dlp &>/dev/null; then
   echo "ERROR: yt-dlp is not installed." >&2
-  echo "Run: pip install yt-dlp" >&2
+  echo "Run: uv tool install yt-dlp" >&2
   exit 2
 fi
 
