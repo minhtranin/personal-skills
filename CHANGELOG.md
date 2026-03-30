@@ -7,6 +7,16 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-03-30
+
+### Added
+- `ps:web`: GitHub tab and detail history page — shows all `/ps:github-summary` results with full_name, language, stars, description, topics, diagram
+
+### Changed
+- `ps:web` nav now includes GitHub count alongside YouTube, Medium, Jira, Slack
+- GitHub history loaded directly from `~/.github-summary/*.json` (slug-per-file, no index.json)
+- Clear history supports GitHub scope
+
 ## [0.5.0] - 2026-03-30
 
 ### Added
