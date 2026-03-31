@@ -1,130 +1,95 @@
 ---
 name: ps:amazon-summary
 description: Fetch and summarize an AWS/Amazon blog post, clearly highlighting technical stack, AWS services, and architecture patterns. Use when the user runs /ps:amazon-summary <url> or asks to summarize an AWS/Amazon blog post.
-argument-hint: <aws-blog-url> [--refresh]
+argument-hint: <aws-blog-url> [--refresh] [--diagram]
 allowed-tools: [Bash, Read, Write]
 ---
 
 # AWS / Amazon Blog Summarizer
 
-The user wants to summarize an AWS or Amazon blog post.
-
 **Arguments:** $ARGUMENTS
 
-Parse the blog URL from the arguments. If `--refresh` is present, skip the history check.
+Parse the blog URL. Flags: `--refresh` bypasses cache. `--diagram` auto-generates diagram without asking.
 
-## Step 0 — Bootstrap scripts if missing
-
-```bash
-ls "$HOME/.local/share/personal-skills/scripts/amazon/fetch_amazon_blog.py" 2>/dev/null
-```
-
-If not found, run the installer:
+## Step 0 — Bootstrap + History check (one shot)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/install.sh | bash
+ls "$HOME/.local/share/personal-skills/scripts/amazon/fetch_amazon_blog.py" 2>/dev/null \
+  && python3 "$HOME/.local/share/personal-skills/scripts/amazon/lookup_amazon.py" "<URL>" 2>/dev/null \
+  && echo "CACHED" || echo "FETCH"
 ```
 
-Stop if it fails.
+- If scripts missing: run installer first: `curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/install.sh | bash`
+- If the output is JSON (lookup succeeded): show cached title, author, category, summary, key points, date. Say *"Cached from <date> — pass --refresh to re-fetch."* **Stop.**
+- Otherwise: continue.
 
-## Step 1 — Check history (skip if --refresh)
+Skip history check if `--refresh` is present.
+
+## Step 1 — Fetch article (truncated for speed)
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/amazon/lookup_amazon.py" "<URL>"
+python3 "$HOME/.local/share/personal-skills/scripts/amazon/fetch_amazon_blog.py" "<URL>" --max-chars 8000
 ```
 
-- **Exit 0 (found):** Show cached title, author, category, summary, key points, and date. Ask: *"Already summarized on <date>. Use cached result? Pass --refresh to re-fetch."* Stop here if user confirms or doesn't respond.
-- **Exit 1 (not found):** Continue.
+Outputs JSON: `title`, `author`, `category`, `url`, `text`. If `text` is empty, stop with error.
 
-## Step 2 — Fetch article
+Extract slug from the URL (last path segment before trailing slash).
+
+## Step 2 — Summarize + Save immediately
+
+Produce from the `text`:
+
+1. **Summary** — 3–5 sentences: problem/use case, solution approach, outcome. Name specific AWS services.
+
+2. **Key Points** — 8–12 bullets in this order, prefixed with tags:
+   - `[Tech]` — each AWS service or technology on its own bullet
+   - `[Arch]` — how components connect
+   - `[Impl]` — specific patterns or decisions
+   - `[Result]` — measurable outcomes
+   - `[Insight]` — non-obvious learnings
+
+**Output to user immediately**, then save right away (do not wait):
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/amazon/fetch_amazon_blog.py" "<URL>"
+python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.py" \
+  --slug "<SLUG>" --url "<URL>" --title "<TITLE>" --author "<AUTHOR>" \
+  --category "<CATEGORY>" --summary "<SUMMARY>" --key-points "<KEY_POINTS>" \
+  --text "<TEXT[:4000]>"
 ```
 
-This outputs JSON with fields: `title`, `author`, `category`, `url`, `text`.
-
-Parse the JSON. If `text` is empty or fetch failed, tell the user and stop.
-
-Extract the slug from the URL (last path segment before trailing slash).
-
-## Step 3 — Summarize with technical focus
-
-Using the article `text`, produce:
-
-1. **Summary** — 3–5 sentences covering: the problem/use case, the solution approach, and the outcome. Mention specific AWS services and technologies by name.
-
-2. **Key Points** — bulleted list of 8–12 concrete takeaways. Structure them in this order:
-   - **[Tech Stack]** AWS services and technologies used (e.g., Amazon Bedrock, Lambda, SageMaker, CDK) — list each on its own bullet
-   - **[Architecture]** How the components connect and interact
-   - **[Implementation]** Specific steps, patterns, or design decisions
-   - **[Results/Metrics]** Measurable outcomes (speed, cost, accuracy, time-to-build)
-   - **[Key Insights]** Non-obvious learnings or best practices
-
-   Prefix technical bullets with `[Tech]`, `[Arch]`, `[Impl]`, `[Result]`, or `[Insight]` tags.
-
-## Step 4 — Output to user immediately
-
-Present in clean markdown:
+Present output as:
 
 ```
 ## <TITLE>
-
 **Category:** <category> | **Author:** <author> | **Source:** [AWS Blog](<url>)
 
 ### Summary
 <summary>
 
 ### Key Points
-<key_points as bullet list>
+<bullet list>
 ```
 
-Then on a new line: *"Browse all history with `/ps:web`. Want a diagram for this? (y/n)"*
+End with: *"Saved. Browse history: `/ps:web`. Want a diagram? (y/n)"* — or skip asking if `--diagram` flag was passed.
 
-## Step 5 — Save to history (run immediately, do not wait for diagram)
-
-Extract slug from the URL (last path segment, e.g. `how-lendi-revamped-...`).
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.py" \
-  --slug "<SLUG>" \
-  --url "<URL>" \
-  --title "<TITLE>" \
-  --author "<AUTHOR>" \
-  --category "<CATEGORY>" \
-  --summary "<SUMMARY_TEXT>" \
-  --key-points "<KEY_POINTS_TEXT>" \
-  --text "<ARTICLE_TEXT_FIRST_4000_CHARS>"
-```
-
-## Step 6 — Diagram (only if user says yes)
-
-If the user replies `y` or `yes`:
+## Step 3 — Diagram (if user says yes or --diagram flag)
 
 ```bash
 bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/dev/null && echo "ok" || echo "skip"
 ```
 
-If `skip`: tell the user excalidraw deps are not installed and stop.
-
-If `ok`: generate an architecture diagram — blog title as central box, AWS services as connected nodes, grouped by layer (Data / Compute / Orchestration / Interface). Write to `/tmp/amazon_diagram.excalidraw`, render:
+If `skip`: inform and stop. If `ok`: generate architecture diagram — title as central box, AWS services as nodes grouped by layer (Interface / API / Compute / Intelligence / Observability / Storage). Write to `/tmp/amazon_diagram.excalidraw`, render:
 
 ```bash
 REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
 cd "$REFS" && uv run python render_excalidraw.py /tmp/amazon_diagram.excalidraw --output /tmp/amazon_diagram.png
 ```
 
-Display PNG with the Read tool. Then update the saved entry with the diagram path:
+Display PNG with the Read tool. Then update the entry:
 
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.py" \
-  --slug "<SLUG>" \
-  --url "<URL>" \
-  --title "<TITLE>" \
-  --author "<AUTHOR>" \
-  --category "<CATEGORY>" \
-  --summary "<SUMMARY_TEXT>" \
-  --key-points "<KEY_POINTS_TEXT>" \
-  --text "<ARTICLE_TEXT_FIRST_4000_CHARS>" \
-  --diagram-png "/tmp/amazon_diagram.png"
+  --slug "<SLUG>" --url "<URL>" --title "<TITLE>" --author "<AUTHOR>" \
+  --category "<CATEGORY>" --summary "<SUMMARY>" --key-points "<KEY_POINTS>" \
+  --text "<TEXT[:4000]>" --diagram-png "/tmp/amazon_diagram.png"
 ```

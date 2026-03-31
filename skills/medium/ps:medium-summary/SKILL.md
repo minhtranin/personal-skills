@@ -1,106 +1,69 @@
 ---
 name: ps:medium-summary
 description: Fetch a Medium article via Freedium and summarize its main points. Use when the user runs /ps-medium-summary <url> or asks to summarize a Medium article.
-argument-hint: <medium-url> [--refresh]
+argument-hint: <medium-url> [--refresh] [--diagram]
 allowed-tools: [Bash, Read, Write]
 ---
 
 # Medium Article Summarizer
 
-The user wants to summarize a Medium article.
-
 **Arguments:** $ARGUMENTS
 
-Parse the Medium URL from the arguments. If `--refresh` is present, skip the history check.
+Parse the Medium URL. Flags: `--refresh` bypasses cache. `--diagram` auto-generates diagram without asking.
 
-## Step 0 — Bootstrap scripts if missing
-
-```bash
-ls "$HOME/.local/share/personal-skills/scripts/medium/fetch_medium.py" 2>/dev/null
-```
-
-If not found, run the installer:
+## Step 0 — Bootstrap + History check (one shot)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/install.sh | bash
+ls "$HOME/.local/share/personal-skills/scripts/medium/fetch_medium.py" 2>/dev/null \
+  && python3 "$HOME/.local/share/personal-skills/scripts/medium/lookup_medium.py" "<URL>" 2>/dev/null \
+  && echo "CACHED" || echo "FETCH"
 ```
 
-Stop if it fails.
+- If scripts missing: run installer first: `curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/install.sh | bash`
+- If output contains JSON (exit 0 from lookup): show cached title, author, summary, key points, date. Say *"Cached from <date> — pass --refresh to re-fetch."* **Stop.**
+- Otherwise: continue to fetch.
 
-## Step 1 — Check history (skip if --refresh)
+Skip history check if `--refresh` is present.
+
+## Step 1 — Fetch article
 
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/medium/lookup_medium.py" "<URL>"
+python3 "$HOME/.local/share/personal-skills/scripts/medium/fetch_medium.py" "<URL>" --max-chars 8000
 ```
 
-- **Exit 0 (found):** Show cached title, author, summary, key points, and date. Ask: *"Already summarized on <date>. Use cached result? Pass --refresh to re-fetch."* Stop here if user confirms or doesn't respond.
-- **Exit 1 (not found):** Continue.
+Outputs JSON: `title`, `author`, `url`, `text`. If `text` is empty, stop with error.
 
-## Step 2 — Fetch article via Freedium
+Extract slug from the URL (last path segment, e.g. `nesti-got-tired-...-da01328b3345`).
 
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/medium/fetch_medium.py" "<URL>"
-```
+## Step 2 — Summarize + Save in parallel
 
-This outputs JSON with fields: `title`, `author`, `url`, `text`.
+Produce immediately from the `text`:
 
-Parse the JSON. If `text` is empty or the fetch failed, tell the user and stop.
+1. **Summary** — 3–5 sentences: problem, approach, conclusion.
+2. **Key Points** — 5–10 concrete bullets (include code/commands if relevant).
 
-## Step 3 — Summarize
-
-Using the article `text`, produce:
-
-1. **Summary** — 3–5 sentence overview: the problem being solved, the approach, and the conclusion.
-2. **Key Points** — bulleted list of 5–10 concrete takeaways (include code snippets or commands if relevant).
-
-## Step 4 — Output to user immediately
-
-Present the title, author, summary and key points in clean markdown.
-
-Then on a new line: *"Browse all history with `/ps:web`. Want a diagram for this? (y/n)"*
-
-## Step 5 — Save to history (run immediately, do not wait for diagram)
-
-Extract slug from the URL (the last path segment, e.g. `nesti-got-tired-...-da01328b3345`).
+**Output to user right away**, then immediately save (do not wait for user response):
 
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
-  --slug "<SLUG>" \
-  --url "<URL>" \
-  --title "<TITLE>" \
-  --author "<AUTHOR>" \
-  --summary "<SUMMARY_TEXT>" \
-  --key-points "<KEY_POINTS_TEXT>" \
-  --text "<ARTICLE_TEXT_FIRST_4000_CHARS>"
+  --slug "<SLUG>" --url "<URL>" --title "<TITLE>" --author "<AUTHOR>" \
+  --summary "<SUMMARY>" --key-points "<KEY_POINTS>" \
+  --text "<TEXT[:4000]>"
 ```
 
-## Step 6 — Diagram (only if user says yes)
+End with: *"Saved. Browse history: `/ps:web`. Want a diagram? (y/n)"* — or skip asking if `--diagram` flag was passed.
 
-If the user replies `y` or `yes`:
+## Step 3 — Diagram (if user says yes or --diagram flag)
 
 ```bash
 bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/dev/null && echo "ok" || echo "skip"
 ```
 
-If `skip`: tell the user excalidraw deps are not installed and stop.
-
-If `ok`: generate a concept map — article title as central box, key points as connected leaf nodes grouped by theme. Write to `/tmp/medium_diagram.excalidraw`, render:
+If `skip`: inform user and stop. If `ok`: generate concept map (title = central box, key points = leaf nodes grouped by theme). Write to `/tmp/medium_diagram.excalidraw`, render:
 
 ```bash
 REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
 cd "$REFS" && uv run python render_excalidraw.py /tmp/medium_diagram.excalidraw --output /tmp/medium_diagram.png
 ```
 
-Display PNG with the Read tool. Then update the saved entry with the diagram path:
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
-  --slug "<SLUG>" \
-  --url "<URL>" \
-  --title "<TITLE>" \
-  --author "<AUTHOR>" \
-  --summary "<SUMMARY_TEXT>" \
-  --key-points "<KEY_POINTS_TEXT>" \
-  --text "<ARTICLE_TEXT_FIRST_4000_CHARS>" \
-  --diagram-png "/tmp/medium_diagram.png"
-```
+Display PNG with Read tool. Update saved entry with `--diagram-png /tmp/medium_diagram.png`.

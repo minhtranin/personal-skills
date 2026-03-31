@@ -121,6 +121,8 @@ def extract_author(html: str) -> str:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="AWS/Amazon blog URL")
+    parser.add_argument("--max-chars", type=int, default=8000,
+                        help="Truncate article text to this length (default 8000)")
     args = parser.parse_args()
 
     url = normalize_url(args.url)
@@ -141,7 +143,7 @@ def main():
         "author": author,
         "category": category,
         "url": url,
-        "text": body,
+        "text": body[:args.max_chars],
     }
 
     print(json.dumps(result, ensure_ascii=False))

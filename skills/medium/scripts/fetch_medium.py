@@ -20,6 +20,10 @@ from html.parser import HTMLParser
 
 
 FREEDIUM_HOST = "freedium-mirror.cfd"
+FREEDIUM_MIRRORS = [
+    "freedium-mirror.cfd",
+    "freedium.cfd",
+]
 
 
 class ArticleExtractor(HTMLParser):
@@ -147,16 +151,29 @@ def extract_author(html: str) -> str:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("url", help="Medium article URL")
-    parser.add_argument("--freedium-host", default=FREEDIUM_HOST)
+    parser.add_argument("--freedium-host", default=None,
+                        help="Freedium mirror host (tries mirrors in order if not set)")
+    parser.add_argument("--max-chars", type=int, default=8000,
+                        help="Truncate article text to this length (default 8000)")
     args = parser.parse_args()
 
     medium_url = normalize_url(args.url)
-    free_url = freedium_url(medium_url, args.freedium_host)
 
-    try:
-        html = fetch(free_url)
-    except Exception as e:
-        print(f"ERROR: Failed to fetch {free_url}: {e}", file=sys.stderr)
+    # Try mirrors in order — use first that returns body text
+    mirrors = [args.freedium_host] if args.freedium_host else FREEDIUM_MIRRORS
+    html = None
+    last_err = None
+    for mirror in mirrors:
+        free_url = freedium_url(medium_url, mirror)
+        try:
+            html = fetch(free_url)
+            break
+        except Exception as e:
+            last_err = e
+            print(f"WARN: mirror {mirror} failed: {e}", file=sys.stderr)
+
+    if html is None:
+        print(f"ERROR: All mirrors failed. Last error: {last_err}", file=sys.stderr)
         sys.exit(1)
 
     extractor = ArticleExtractor()
@@ -192,7 +209,7 @@ def main():
         "author": author,
         "url": medium_url,
         "freedium_url": free_url,
-        "text": body,
+        "text": body[:args.max_chars],
     }
 
     print(json.dumps(result, ensure_ascii=False))
