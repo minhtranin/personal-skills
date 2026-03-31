@@ -97,6 +97,11 @@ BASE_STYLE = """
   .btn-danger:hover { background: #b91c1c; }
   .btn-secondary { display: inline-block; background: #e5e7eb; color: #374151; border: none; border-radius: 6px; padding: 6px 14px; font-size: 0.82rem; font-weight: 600; cursor: pointer; text-decoration: none; }
   .btn-secondary:hover { background: #d1d5db; }
+  .tech-stack { margin: 0; }
+  .tech-stack dt { font-weight: 700; color: #c2410c; font-size: 0.88rem; margin-top: 10px; }
+  .tech-stack dd { margin: 2px 0 0 1.2em; font-size: 0.88rem; color: #374151; line-height: 1.55; }
+  .summary-para { margin: 0 0 0.75em; font-size: 0.93rem; line-height: 1.7; }
+  .summary-para:last-child { margin-bottom: 0; }
   .confirm-box { background: #fff; border: 1px solid #fca5a5; border-radius: 10px; padding: 28px 32px; max-width: 480px; margin: 60px auto; text-align: center; }
   .confirm-box h2 { margin: 0 0 8px; font-size: 1.15rem; color: #dc2626; }
   .confirm-box p { color: #555; font-size: 0.93rem; margin: 0 0 22px; line-height: 1.6; }
@@ -254,27 +259,50 @@ DETAIL_TEMPLATE = """<!DOCTYPE html>
   {% if data.summary %}
   <div class="section">
     <h3>Summary</h3>
-    <p>{{ data.summary }}</p>
+    {% if source_type == 'amazon' %}
+      {% for para in data.summary.split('\n\n') %}
+        {% if para.strip() %}<p class="summary-para">{{ para.strip() }}</p>{% endif %}
+      {% endfor %}
+    {% else %}
+      <p>{{ data.summary }}</p>
+    {% endif %}
   </div>
   {% endif %}
 
   {% if data.key_points %}
   <div class="section">
-    <h3>Key Points</h3>
-    {% set pts = data.key_points.replace('\r\n', '\n') %}
-    {% if '|' in pts %}
-      {% set items = pts.split('|') %}
-    {% elif '\n' in pts %}
-      {% set items = pts.split('\n') %}
+    {% if source_type == 'amazon' %}
+      <h3>Tech Stack</h3>
+      {% set pts = data.key_points.replace('\r\n', '\n') %}
+      {% if '|' in pts %}{% set items = pts.split('|') %}
+      {% elif '\n' in pts %}{% set items = pts.split('\n') %}
+      {% else %}{% set items = [pts] %}{% endif %}
+      <dl class="tech-stack">
+        {% for pt in items %}
+          {% set pt = pt.strip() %}
+          {% if pt %}
+            {% if ' — ' in pt %}
+              {% set parts = pt.split(' — ', 1) %}
+              <dt>{{ parts[0] }}</dt><dd>{{ parts[1] }}</dd>
+            {% else %}
+              <dt>{{ pt }}</dt>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </dl>
     {% else %}
-      {% set items = [pts] %}
+      <h3>Key Points</h3>
+      {% set pts = data.key_points.replace('\r\n', '\n') %}
+      {% if '|' in pts %}{% set items = pts.split('|') %}
+      {% elif '\n' in pts %}{% set items = pts.split('\n') %}
+      {% else %}{% set items = [pts] %}{% endif %}
+      <ul style="margin:0;padding-left:1.4em;line-height:1.8;font-size:0.93rem;color:#333">
+        {% for pt in items %}
+          {% set pt = pt.strip().lstrip('-•* ') %}
+          {% if pt %}<li>{{ pt }}</li>{% endif %}
+        {% endfor %}
+      </ul>
     {% endif %}
-    <ul style="margin:0;padding-left:1.4em;line-height:1.8;font-size:0.93rem;color:#333">
-      {% for pt in items %}
-        {% set pt = pt.strip().lstrip('-•* ') %}
-        {% if pt %}<li>{{ pt }}</li>{% endif %}
-      {% endfor %}
-    </ul>
   </div>
   {% endif %}
 
@@ -386,7 +414,7 @@ def youtube_detail(video_id: str):
     data = load_entry(YOUTUBE_DIR, safe_key(video_id))
     if data is None:
         abort(404)
-    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/youtube")
+    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/youtube", source_type="")
 
 
 @app.route("/medium/<slug>")
@@ -394,7 +422,7 @@ def medium_detail(slug: str):
     data = load_entry(MEDIUM_DIR, safe_key(slug))
     if data is None:
         abort(404)
-    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/medium")
+    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/medium", source_type="")
 
 
 @app.route("/github/<path:slug>")
@@ -405,7 +433,7 @@ def github_detail(slug: str):
     data = load_entry(GITHUB_DIR, safe)
     if data is None:
         abort(404)
-    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/github")
+    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/github", source_type="")
 
 
 @app.route("/jira/<key>")
@@ -416,7 +444,7 @@ def jira_detail(key: str):
     data = load_entry(JIRA_DIR, key.upper())
     if data is None:
         abort(404)
-    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/jira")
+    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/jira", source_type="")
 
 
 @app.route("/slack/<thread_id>")
@@ -424,7 +452,7 @@ def slack_detail(thread_id: str):
     data = load_entry(SLACK_DIR, safe_key(thread_id))
     if data is None:
         abort(404)
-    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/slack")
+    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/slack", source_type="")
 
 
 @app.route("/amazon/<slug>")
@@ -432,7 +460,7 @@ def amazon_detail(slug: str):
     data = load_entry(AMAZON_DIR, safe_key(slug))
     if data is None:
         abort(404)
-    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/amazon")
+    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/amazon", source_type="amazon")
 
 
 # ---------------------------------------------------------------------------
