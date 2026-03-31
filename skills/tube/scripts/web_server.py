@@ -23,6 +23,7 @@ MEDIUM_DIR  = Path.home() / ".medium-summary"
 JIRA_DIR    = Path.home() / ".jira-summary"
 SLACK_DIR   = Path.home() / ".slack-summary"
 GITHUB_DIR  = Path.home() / ".github-summary"
+AMAZON_DIR  = Path.home() / ".amazon-summary"
 
 # ---------------------------------------------------------------------------
 # Storage helpers
@@ -80,6 +81,7 @@ BASE_STYLE = """
   .badge-jira  { background: #ede9fe; color: #6d28d9; }
   .badge-slack  { background: #fef3c7; color: #92400e; }
   .badge-github { background: #f0fdf4; color: #15803d; }
+  .badge-amazon { background: #fff7ed; color: #c2410c; }
   .card .snippet { font-size: 0.88rem; color: #555; line-height: 1.5; }
   .empty { text-align: center; color: #aaa; padding: 60px 0; font-size: 0.95rem; }
   .back { font-size: 0.88rem; margin-bottom: 1.5rem; }
@@ -108,6 +110,7 @@ NAV_TEMPLATE = """
   <a href="/" class="{{ 'active' if active == 'all' else '' }}">All ({{ total }})</a>
   <a href="/youtube" class="{{ 'active' if active == 'youtube' else '' }}">YouTube ({{ yt_count }})</a>
   <a href="/medium" class="{{ 'active' if active == 'medium' else '' }}">Medium ({{ med_count }})</a>
+  <a href="/amazon" class="{{ 'active' if active == 'amazon' else '' }}">AWS Blog ({{ amazon_count }})</a>
   <a href="/github" class="{{ 'active' if active == 'github' else '' }}">GitHub ({{ gh_count }})</a>
   <a href="/jira" class="{{ 'active' if active == 'jira' else '' }}">Jira ({{ jira_count }})</a>
   <a href="/slack" class="{{ 'active' if active == 'slack' else '' }}">Slack ({{ slack_count }})</a>
@@ -138,6 +141,8 @@ LIST_TEMPLATE = """<!DOCTYPE html>
         <span class="badge badge-med">Medium</span>
       {% elif item._type == 'slack' %}
         <span class="badge badge-slack">Slack</span>
+      {% elif item._type == 'amazon' %}
+        <span class="badge badge-amazon">AWS Blog</span>
       {% elif item._type == 'github' %}
         <span class="badge badge-github">GitHub</span>
       {% else %}
@@ -147,6 +152,7 @@ LIST_TEMPLATE = """<!DOCTYPE html>
       <div class="meta">
         {{ item.url }} &nbsp;·&nbsp; {{ item.date }}
         {% if item.get('author') %} &nbsp;·&nbsp; {{ item.author }}{% endif %}
+        {% if item.get('category') %} &nbsp;·&nbsp; {{ item.category }}{% endif %}
         {% if item.get('language') %} &nbsp;·&nbsp; {{ item.language }}{% endif %}
         {% if item.get('stars') %} &nbsp;·&nbsp; ★ {{ item.stars }}{% endif %}
         {% if item.get('status') %} &nbsp;·&nbsp; {{ item.status }}{% endif %}
@@ -223,6 +229,7 @@ DETAIL_TEMPLATE = """<!DOCTYPE html>
     <a href="{{ data.url }}" target="_blank" rel="noopener">{{ data.url }}</a>
     &nbsp;·&nbsp; {{ data.date }}
     {% if data.get('author') %} &nbsp;·&nbsp; by {{ data.author }}{% endif %}
+    {% if data.get('category') %} &nbsp;·&nbsp; <span style="color:#c2410c;font-weight:600">{{ data.category }}</span>{% endif %}
     {% if data.get('language') %} &nbsp;·&nbsp; {{ data.language }}{% endif %}
     {% if data.get('stars') %} &nbsp;·&nbsp; ★ {{ data.stars }}{% endif %}
     {% if data.get('status') %} &nbsp;·&nbsp; <strong>{{ data.status }}</strong>{% endif %}
@@ -302,8 +309,9 @@ def all_items():
     jira   = [dict(e, _type="jira",    _detail_url=f"/jira/{e['key']}")         for e in load_index(JIRA_DIR)]
     slack  = [dict(e, _type="slack",   _detail_url=f"/slack/{e['thread_id']}") for e in load_index(SLACK_DIR)]
     github = [dict(e, _type="github",  _detail_url=f"/github/{e['_slug']}")    for e in load_github_index()]
-    combined = sorted(yt + med + jira + slack + github, key=lambda x: x.get("date", ""), reverse=True)
-    return combined, len(yt), len(med), len(jira), len(slack), len(github)
+    amazon = [dict(e, _type="amazon",  _detail_url=f"/amazon/{e['slug']}")     for e in load_index(AMAZON_DIR)]
+    combined = sorted(yt + med + jira + slack + github + amazon, key=lambda x: x.get("date", ""), reverse=True)
+    return combined, len(yt), len(med), len(jira), len(slack), len(github), len(amazon)
 
 
 def safe_key(key: str) -> str:
@@ -312,57 +320,65 @@ def safe_key(key: str) -> str:
     return key
 
 
-def nav_ctx(active, items, yt_count, med_count, jira_count, slack_count, gh_count=0):
+def nav_ctx(active, items, yt_count, med_count, jira_count, slack_count, gh_count=0, amazon_count=0):
     return dict(active=active, total=len(items),
                 yt_count=yt_count, med_count=med_count, jira_count=jira_count,
-                slack_count=slack_count, gh_count=gh_count)
+                slack_count=slack_count, gh_count=gh_count, amazon_count=amazon_count)
 
 
 @app.route("/")
 def index():
-    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count = all_items()
     return render_template_string(LIST_TEMPLATE, title="All Summaries", items=items,
-        **nav_ctx("all", items, yt_count, med_count, jira_count, slack_count, gh_count))
+        **nav_ctx("all", items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count))
 
 
 @app.route("/youtube")
 def youtube_list():
-    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count = all_items()
     yt_items = [i for i in items if i["_type"] == "youtube"]
     return render_template_string(LIST_TEMPLATE, title="YouTube Summaries", items=yt_items,
-        **nav_ctx("youtube", items, yt_count, med_count, jira_count, slack_count, gh_count))
+        **nav_ctx("youtube", items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count))
 
 
 @app.route("/medium")
 def medium_list():
-    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count = all_items()
     med_items = [i for i in items if i["_type"] == "medium"]
     return render_template_string(LIST_TEMPLATE, title="Medium Summaries", items=med_items,
-        **nav_ctx("medium", items, yt_count, med_count, jira_count, slack_count, gh_count))
+        **nav_ctx("medium", items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count))
+
+
+@app.route("/amazon")
+def amazon_list():
+    items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count = all_items()
+    amazon_items = [i for i in items if i["_type"] == "amazon"]
+    return render_template_string(LIST_TEMPLATE, title="AWS Blog Summaries", items=amazon_items,
+        **nav_ctx("amazon", items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count))
 
 
 @app.route("/github")
 def github_list():
-    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count = all_items()
     gh_items = [i for i in items if i["_type"] == "github"]
     return render_template_string(LIST_TEMPLATE, title="GitHub Summaries", items=gh_items,
-        **nav_ctx("github", items, yt_count, med_count, jira_count, slack_count, gh_count))
+        **nav_ctx("github", items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count))
 
 
 @app.route("/jira")
 def jira_list():
-    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count = all_items()
     jira_items = [i for i in items if i["_type"] == "jira"]
     return render_template_string(LIST_TEMPLATE, title="Jira Summaries", items=jira_items,
-        **nav_ctx("jira", items, yt_count, med_count, jira_count, slack_count, gh_count))
+        **nav_ctx("jira", items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count))
 
 
 @app.route("/slack")
 def slack_list():
-    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
+    items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count = all_items()
     slack_items = [i for i in items if i["_type"] == "slack"]
     return render_template_string(LIST_TEMPLATE, title="Slack Summaries", items=slack_items,
-        **nav_ctx("slack", items, yt_count, med_count, jira_count, slack_count, gh_count))
+        **nav_ctx("slack", items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count))
 
 
 @app.route("/youtube/<video_id>")
@@ -409,6 +425,14 @@ def slack_detail(thread_id: str):
     if data is None:
         abort(404)
     return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/slack")
+
+
+@app.route("/amazon/<slug>")
+def amazon_detail(slug: str):
+    data = load_entry(AMAZON_DIR, safe_key(slug))
+    if data is None:
+        abort(404)
+    return render_template_string(DETAIL_TEMPLATE, data=data, back_url="/amazon")
 
 
 # ---------------------------------------------------------------------------
@@ -559,12 +583,13 @@ def run_token_server():
 # ---------------------------------------------------------------------------
 
 SCOPE_META = {
-    "all":     ("All",     [YOUTUBE_DIR, MEDIUM_DIR, JIRA_DIR, SLACK_DIR, GITHUB_DIR], "/"),
-    "youtube": ("YouTube", [YOUTUBE_DIR], "/youtube"),
-    "medium":  ("Medium",  [MEDIUM_DIR],  "/medium"),
-    "github":  ("GitHub",  [GITHUB_DIR],  "/github"),
-    "jira":    ("Jira",    [JIRA_DIR],    "/jira"),
-    "slack":   ("Slack",   [SLACK_DIR],   "/slack"),
+    "all":     ("All",      [YOUTUBE_DIR, MEDIUM_DIR, JIRA_DIR, SLACK_DIR, GITHUB_DIR, AMAZON_DIR], "/"),
+    "youtube": ("YouTube",  [YOUTUBE_DIR], "/youtube"),
+    "medium":  ("Medium",   [MEDIUM_DIR],  "/medium"),
+    "amazon":  ("AWS Blog", [AMAZON_DIR],  "/amazon"),
+    "github":  ("GitHub",   [GITHUB_DIR],  "/github"),
+    "jira":    ("Jira",     [JIRA_DIR],    "/jira"),
+    "slack":   ("Slack",    [SLACK_DIR],   "/slack"),
 }
 
 
@@ -587,7 +612,7 @@ def _clear_scope(dirs):
 
 
 def _nav_ctx_empty():
-    return dict(active="all", total=0, yt_count=0, med_count=0, jira_count=0, slack_count=0, gh_count=0)
+    return dict(active="all", total=0, yt_count=0, med_count=0, jira_count=0, slack_count=0, gh_count=0, amazon_count=0)
 
 
 @app.route("/clear", defaults={"scope": "all"})
@@ -598,8 +623,8 @@ def clear_confirm(scope: str):
     label, dirs, back_url = SCOPE_META[scope]
     count = _count_scope(dirs)
     path_hint = ", ".join(str(d) for d in dirs)
-    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
-    ctx = nav_ctx("all", items, yt_count, med_count, jira_count, slack_count, gh_count)
+    items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count = all_items()
+    ctx = nav_ctx("all", items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count)
     return render_template_string(CONFIRM_CLEAR_TEMPLATE,
         label=label, count=count, path=path_hint, scope=scope, back_url=back_url, **ctx)
 
@@ -610,8 +635,8 @@ def clear_execute(scope: str):
         abort(404)
     label, dirs, back_url = SCOPE_META[scope]
     _clear_scope(dirs)
-    items, yt_count, med_count, jira_count, slack_count, gh_count = all_items()
-    ctx = nav_ctx("all", items, yt_count, med_count, jira_count, slack_count, gh_count)
+    items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count = all_items()
+    ctx = nav_ctx("all", items, yt_count, med_count, jira_count, slack_count, gh_count, amazon_count)
     return render_template_string(CLEARED_TEMPLATE, label=label, back_url=back_url, **ctx)
 
 

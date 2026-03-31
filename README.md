@@ -8,12 +8,6 @@ Personal productivity skills for Claude Code, Antigravity, and OpenCode.
 curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/install.sh | bash
 ```
 
-Update anytime:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/install.sh | bash -s -- --update
-```
-
 ## Skills
 
 | Command | Description |
@@ -21,6 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/ins
 | `/ps:bot-telegram` | Set up Telegram bot to chat with Claude from your phone |
 | `/ps:tube-summary <youtube-url>` | Summarize a YouTube video |
 | `/ps:medium-summary <medium-url>` | Summarize a Medium article + optional diagram |
+| `/ps:amazon-summary <aws-blog-url>` | Summarize an AWS/Amazon blog post — highlights tech stack, AWS services, architecture |
 | `/ps:github-summary <github-url>` | Summarize a GitHub repo — stack, architecture, activity + diagram |
 | `/ps:frontend-ui <brand-hex> [--warm\|--cool] [--dark] [--review]` | Generate premium CSS color token system (brand-tinted neutrals, shadows, card component) |
 | `/ps:jira-summary <PROJ-123>` | Summarize a Jira issue + comments |

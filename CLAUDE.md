@@ -41,6 +41,7 @@ skills/<namespace>/
 | `github` | `/ps:github-summary` | Active |
 | `frontend` | `/ps:frontend-ui` | Active |
 | `excalidraw` | `/ps:excalidraw` | Active |
+| `amazon` | `/ps:amazon-summary` | Active |
 
 ## Adding a new skill namespace
 
@@ -78,6 +79,13 @@ skills/<namespace>/
 | `references/color-palette.md` | Brand colors and semantic color mapping |
 | `references/element-templates.md` | Copy-paste JSON templates for Excalidraw elements |
 | `references/pyproject.toml` | uv project config for playwright dependency |
+
+### `amazon` namespace
+| Script | Purpose |
+|---|---|
+| `fetch_amazon_blog.py <url>` | Fetches AWS/Amazon blog post HTML, outputs JSON with title, author, category, text |
+| `lookup_amazon.py <url>` | History cache lookup for Amazon blog posts |
+| `save_amazon_summary.py` | Saves entry to `~/.amazon-summary/` |
 
 ### `slack` namespace
 | Script | Purpose |
