@@ -16,137 +16,6 @@ import json
 import re
 import sys
 import urllib.request
-from html.parser import HTMLParser
-
-
-class BlogExtractor(HTMLParser):
-    """Extract title, author, and body text from AWS/Amazon blog HTML."""
-
-    def __init__(self):
-        super().__init__()
-        self.title = ""
-        self.author = ""
-        self.paragraphs = []
-
-        self._skip = False
-        self._skip_depth = 0
-        self._skip_tags = {"script", "style", "nav", "header", "footer", "aside"}
-
-        self._in_title = False
-        self._in_article = False
-        self._article_depth = 0
-        self._current_text = []
-
-        # Article body selectors — AWS Blog uses several patterns
-        self._article_classes = {
-            "blog-post-content", "aws-blog-post", "blog-post__body",
-            "blog-post-content-container", "entry-content", "post-content",
-            "article-content", "lb-post-content",
-        }
-
-    def handle_starttag(self, tag, attrs):
-        attrs_dict = dict(attrs)
-
-        if tag in self._skip_tags:
-            self._skip = True
-            self._skip_depth = 1
-            return
-        if self._skip:
-            self._skip_depth += 1
-            return
-
-        classes = set((attrs_dict.get("class") or "").split())
-
-        if not self._in_article:
-            if tag in ("div", "article", "section") and classes & self._article_classes:
-                self._in_article = True
-                self._article_depth = 1
-                return
-            # Fallback: <article> tag directly
-            if tag == "article":
-                self._in_article = True
-                self._article_depth = 1
-                return
-
-        if self._in_article and tag in ("div", "article", "section"):
-            self._article_depth += 1
-
-        if tag == "title":
-            self._in_title = True
-
-    def handle_endtag(self, tag):
-        if self._skip:
-            self._skip_depth -= 1
-            if self._skip_depth == 0:
-                self._skip = False
-            return
-
-        if tag == "title":
-            self._in_title = False
-
-        if self._in_article and tag in ("div", "article", "section"):
-            self._article_depth -= 1
-            if self._article_depth == 0:
-                self._in_article = False
-
-        if tag in {"p", "h1", "h2", "h3", "h4", "h5", "li", "pre", "blockquote", "td", "figcaption"}:
-            text = " ".join(self._current_text).strip()
-            if text:
-                self.paragraphs.append(text)
-            self._current_text = []
-
-    def handle_data(self, data):
-        if self._skip:
-            return
-        stripped = data.strip()
-        if not stripped:
-            return
-
-        if self._in_title and not self.title:
-            # Strip site suffix like " | AWS Machine Learning Blog"
-            self.title = re.sub(r"\s*[\|–\-]\s*(AWS|Amazon).*$", "", stripped).strip()
-            return
-
-        if self._in_article:
-            self._current_text.append(stripped)
-
-
-def extract_meta(html: str) -> dict:
-    """Extract author and title from meta tags."""
-    result = {}
-
-    # OG title
-    m = re.search(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\']', html, re.I)
-    if m:
-        result["og_title"] = m.group(1).strip()
-
-    # Author from meta
-    for pattern in [
-        r'<meta[^>]+name=["\']author["\'][^>]+content=["\']([^"\']+)["\']',
-        r'<meta[^>]+property=["\']article:author["\'][^>]+content=["\']([^"\']+)["\']',
-    ]:
-        m = re.search(pattern, html, re.I)
-        if m:
-            result["author"] = m.group(1).strip()
-            break
-
-    # Author from common byline patterns in AWS blogs
-    if "author" not in result:
-        patterns = [
-            r'class="[^"]*author[^"]*"[^>]*>([^<]{3,60})</[^>]+>',
-            r'by\s+<[^>]+>([^<]{3,60})</[^>]+>',
-            r'"author"\s*:\s*\{[^}]*"name"\s*:\s*"([^"]{3,60})"',
-        ]
-        for pat in patterns:
-            m = re.search(pat, html, re.I)
-            if m:
-                candidate = m.group(1).strip()
-                # Filter out generic strings
-                if len(candidate) > 2 and "<" not in candidate:
-                    result["author"] = candidate
-                    break
-
-    return result
 
 
 def normalize_url(url: str) -> str:
@@ -158,13 +27,8 @@ def normalize_url(url: str) -> str:
 
 def extract_category(url: str) -> str:
     """Extract blog category from URL path, e.g. 'machine-learning'."""
-    m = re.search(r"aws\.amazon\.com/blogs/([^/]+)", url)
-    if m:
-        return m.group(1)
-    m = re.search(r"amazon\.com/blogs/([^/]+)", url)
-    if m:
-        return m.group(1)
-    return ""
+    m = re.search(r"(?:aws\.)?amazon\.com/blogs/([^/]+)", url)
+    return m.group(1) if m else ""
 
 
 def fetch(url: str) -> str:
@@ -178,6 +42,80 @@ def fetch(url: str) -> str:
     )
     with urllib.request.urlopen(req, timeout=30) as resp:
         return resp.read().decode("utf-8", errors="replace")
+
+
+def strip_tags(html: str) -> str:
+    """Remove HTML tags and decode common entities."""
+    text = re.sub(r"<(script|style|nav|header|footer|aside)[^>]*>.*?</\1>", " ", html, flags=re.DOTALL | re.I)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+    text = text.replace("&quot;", '"').replace("&#39;", "'").replace("&nbsp;", " ")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def extract_article_body(html: str) -> str:
+    """Extract article body using known AWS blog section selectors."""
+    # AWS blog: <section class="blog-post-content ...">
+    # Also try: <div class="blog-post-content ...">
+    # Also try: property="articleBody"
+    patterns = [
+        r'<(?:section|div)[^>]*\bclass="[^"]*blog-post-content[^"]*"[^>]*>(.*?)</(?:section|div)>',
+        r'<(?:section|div|article)[^>]*\bproperty="articleBody"[^>]*>(.*?)</(?:section|div|article)>',
+        r'<(?:div|article)[^>]*\bclass="[^"]*entry-content[^"]*"[^>]*>(.*?)</(?:div|article)>',
+        r'<article[^>]*>(.*?)</article>',
+    ]
+    for pat in patterns:
+        # Use DOTALL but limit greediness via a large chunk (AWS blog content < 200KB)
+        m = re.search(pat, html, re.DOTALL | re.I)
+        if m:
+            body = strip_tags(m.group(1))
+            if len(body) > 200:
+                return body
+    return ""
+
+
+def extract_title(html: str) -> str:
+    """Extract page title from OG meta or <title> tag."""
+    # OG title is cleanest
+    m = re.search(r'<meta[^>]+property=["\']og:title["\'][^>]+content=["\']([^"\']+)["\']', html, re.I)
+    if not m:
+        m = re.search(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]+property=["\']og:title["\']', html, re.I)
+    if m:
+        return m.group(1).strip()
+    # <title> tag — strip site suffix
+    m = re.search(r"<title[^>]*>([^<]+)</title>", html, re.I)
+    if m:
+        title = m.group(1).strip()
+        title = re.sub(r"\s*[\|–\-]\s*(AWS|Amazon|Artificial Intelligence).*$", "", title, flags=re.I)
+        return title.strip()
+    return ""
+
+
+def extract_author(html: str) -> str:
+    """Extract author from structured data or byline patterns."""
+    # Schema.org Person name
+    m = re.search(r'property=["\']name["\'][^>]*>\s*([^<]{3,80})\s*</span>', html, re.I)
+    if m:
+        candidate = m.group(1).strip()
+        if candidate and "<" not in candidate:
+            return candidate
+    # Byline: "by <span>Name</span>"
+    m = re.search(r'\bby\s+<[^>]+>\s*([^<]{3,80})\s*</[^>]+>', html, re.I)
+    if m:
+        candidate = m.group(1).strip()
+        if candidate and "<" not in candidate:
+            return candidate
+    # Meta author
+    m = re.search(r'<meta[^>]+name=["\']author["\'][^>]+content=["\']([^"\']+)["\']', html, re.I)
+    if m:
+        return m.group(1).strip()
+    # JSON-LD "author" field
+    m = re.search(r'"author"\s*:\s*\{\s*"name"\s*:\s*"([^"]{3,80})"', html)
+    if m:
+        return m.group(1).strip()
+    return ""
 
 
 def main():
@@ -194,35 +132,9 @@ def main():
         print(f"ERROR: Failed to fetch {url}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    extractor = BlogExtractor()
-    extractor.feed(html)
-
-    meta = extract_meta(html)
-    title = extractor.title or meta.get("og_title", "")
-    author = extractor.author or meta.get("author", "")
-    body = "\n\n".join(extractor.paragraphs).strip()
-
-    # Fallback: grab all visible text from <main> or body
-    if not body:
-        class FallbackExtractor(HTMLParser):
-            def __init__(self):
-                super().__init__()
-                self.lines = []
-                self._skip = False
-            def handle_starttag(self, tag, attrs):
-                if tag in {"script", "style", "nav", "header", "footer"}:
-                    self._skip = True
-            def handle_endtag(self, tag):
-                if tag in {"script", "style", "nav", "header", "footer"}:
-                    self._skip = False
-            def handle_data(self, data):
-                if not self._skip:
-                    t = data.strip()
-                    if t:
-                        self.lines.append(t)
-        fb = FallbackExtractor()
-        fb.feed(html)
-        body = "\n".join(fb.lines)
+    body = extract_article_body(html)
+    title = extract_title(html)
+    author = extract_author(html)
 
     result = {
         "title": title,
