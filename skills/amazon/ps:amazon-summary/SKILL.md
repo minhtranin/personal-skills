@@ -20,12 +20,12 @@ ls "$HOME/.local/share/personal-skills/scripts/amazon/fetch_amazon_blog.py" 2>/d
 ```
 
 - If scripts missing: run installer first: `curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/install.sh | bash`
-- If the output is JSON (lookup succeeded): show cached title, author, category, summary, tech stack, date. Say *"Cached from <date> — pass --refresh to re-fetch."* **Stop.**
+- If output is JSON (lookup succeeded): show cached result. Say *"Cached from <date> — pass --refresh to re-fetch."* **Stop.**
 - Otherwise: continue.
 
 Skip history check if `--refresh` is present.
 
-## Step 1 — Fetch article (truncated for speed)
+## Step 1 — Fetch article
 
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/amazon/fetch_amazon_blog.py" "<URL>" --max-chars 8000
@@ -33,36 +33,37 @@ python3 "$HOME/.local/share/personal-skills/scripts/amazon/fetch_amazon_blog.py"
 
 Outputs JSON: `title`, `author`, `category`, `url`, `text`. If `text` is empty, stop with error.
 
-Extract slug from the URL (last path segment before trailing slash).
+Extract slug from URL (last path segment before trailing slash).
 
 ## Step 2 — Produce output + Save immediately
 
-### Summary (narrative — no bullet Key Points)
+From the `text`, produce **three sections**:
 
-Write **4 short paragraphs**, each a few sentences. Weave insights naturally into the story:
+### A. Summary (narrative)
+4 short paragraphs, no headers, no bullets:
+1. **Problem** — what pain/gap the company faced
+2. **Solution** — what they built, which AWS services are central, how agents/components work together
+3. **Build & decisions** — key technical choices (model selection, guardrails, frameworks, why specific services)
+4. **Outcomes & lessons** — measurable results + non-obvious insights worth remembering
 
-1. **Problem** — what pain/gap the company faced and why it mattered
-2. **Solution** — what they built, which AWS services are central to it, and how agents/components work together
-3. **Build & decisions** — key technical or design choices (e.g. model selection strategy, guardrails, why EKS, how MCP connects things)
-4. **Outcomes & lessons** — measurable results + 1-2 non-obvious insights worth remembering
-
-Do NOT use bullet points or headers inside the summary. Write it as flowing prose.
-
-### Tech Stack (replaces Key Points)
-
-For each AWS service or tool used, write one entry in this exact format:
-```
-TechName — what it does in this specific project (one concrete sentence)
-```
+### B. Key Points
+5–8 bullets capturing what's worth taking away from this article: decisions made, patterns used, results achieved, lessons learned. These are article-level insights, **not** tech descriptions.
 
 Examples:
-- `Amazon Bedrock — runs foundation models for all 5 specialized agents; each agent uses a task-optimal model rather than always the most powerful one`
-- `Bedrock Guardrails — enforces regulatory and content compliance across all agent interactions, non-negotiable in Australian financial services`
-- `Amazon EKS — hosts and auto-scales the 5 AI agents under variable customer demand`
+- Embedding domain expert knowledge into prompts had more impact than model selection alone
+- Built in 16 weeks using a 30,000-hour cross-functional sprint — Bedrock significantly accelerated the build
+- Treat Guardrails as non-negotiable from day one in regulated environments, not a retrofit
 
-Separate entries with `|` (pipe) for storage.
+### C. Tech Stack
+One entry per AWS service or tool, format: `Name — what it does in this project (one concrete sentence)`
 
-### Output format
+Examples:
+- `Amazon Bedrock — runs foundation models for all 5 agents; each agent uses a task-optimal model`
+- `Bedrock Guardrails — enforces regulatory compliance across all agent interactions`
+
+Separate entries with `|` (pipe).
+
+### Output to user
 
 ```
 ## <TITLE>
@@ -71,13 +72,17 @@ Separate entries with `|` (pipe) for storage.
 ### Summary
 <4-paragraph narrative>
 
+### Key Points
+- <insight>
+- <insight>
+...
+
 ### Tech Stack
-<Name — description>
 <Name — description>
 ...
 ```
 
-Then: *"Saved. Browse history: `/ps:web`. Want a diagram? (y/n)"* — skip asking if `--diagram` flag was passed.
+Then: *"Saved. Browse history: `/ps:web`. Want a diagram? (y/n)"* — skip if `--diagram` flag.
 
 ### Save immediately (do not wait for diagram)
 
@@ -85,7 +90,8 @@ Then: *"Saved. Browse history: `/ps:web`. Want a diagram? (y/n)"* — skip askin
 python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.py" \
   --slug "<SLUG>" --url "<URL>" --title "<TITLE>" --author "<AUTHOR>" \
   --category "<CATEGORY>" --summary "<4_PARAGRAPH_SUMMARY>" \
-  --key-points "<TECH_STACK_PIPE_SEPARATED>" \
+  --key-points "<KEY_POINTS_PIPE_SEPARATED>" \
+  --tech-stack "<TECH_STACK_PIPE_SEPARATED>" \
   --text "<TEXT[:4000]>"
 ```
 
@@ -97,14 +103,14 @@ bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/de
 
 If `skip`: inform and stop.
 
-If `ok`: generate a layered architecture diagram. **Each tech/service box must include a short purpose line** — format each node label as:
+If `ok`: generate a layered architecture diagram. Each tech/service box label format:
 ```
 ServiceName
-<one short phrase: what it does>
+<short purpose phrase>
 ```
-Example node: `Amazon Bedrock\nFM provider\nper-agent model selection`
+Example: `Amazon Bedrock\nFM provider\nper-agent model selection`
 
-Group nodes by layer: Interface → API → Compute/Agents → Intelligence → Observability → Storage
+Group by layer: Interface → API → Compute/Agents → Intelligence → Observability → Storage
 
 Write to `/tmp/amazon_diagram.excalidraw`, render:
 
@@ -113,11 +119,4 @@ REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
 cd "$REFS" && uv run python render_excalidraw.py /tmp/amazon_diagram.excalidraw --output /tmp/amazon_diagram.png
 ```
 
-Display PNG with the Read tool. Then update the entry:
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.py" \
-  --slug "<SLUG>" --url "<URL>" --title "<TITLE>" --author "<AUTHOR>" \
-  --category "<CATEGORY>" --summary "<SUMMARY>" --key-points "<KEY_POINTS>" \
-  --text "<TEXT[:4000]>" --diagram-png "/tmp/amazon_diagram.png"
-```
+Display PNG with Read tool. Update entry with `--diagram-png /tmp/amazon_diagram.png` (include all other args too).

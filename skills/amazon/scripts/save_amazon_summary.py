@@ -38,6 +38,7 @@ def main():
     parser.add_argument("--category", default="")
     parser.add_argument("--summary", default="")
     parser.add_argument("--key-points", default="")
+    parser.add_argument("--tech-stack", default="")
     parser.add_argument("--text", default="")
     parser.add_argument("--diagram-png", default="")
     parser.add_argument("--data-dir", default=str(DEFAULT_DATA_DIR))
@@ -57,6 +58,7 @@ def main():
         "category": args.category,
         "summary": args.summary,
         "key_points": args.key_points,
+        "tech_stack": args.tech_stack,
         "text": args.text[:4000],
         "diagram_png": args.diagram_png,
         "date": now,

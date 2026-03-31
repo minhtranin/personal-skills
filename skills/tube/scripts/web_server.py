@@ -271,38 +271,40 @@ DETAIL_TEMPLATE = """<!DOCTYPE html>
 
   {% if data.key_points %}
   <div class="section">
-    {% if source_type == 'amazon' %}
-      <h3>Tech Stack</h3>
-      {% set pts = data.key_points.replace('\r\n', '\n') %}
-      {% if '|' in pts %}{% set items = pts.split('|') %}
-      {% elif '\n' in pts %}{% set items = pts.split('\n') %}
-      {% else %}{% set items = [pts] %}{% endif %}
-      <dl class="tech-stack">
-        {% for pt in items %}
-          {% set pt = pt.strip() %}
-          {% if pt %}
-            {% if ' — ' in pt %}
-              {% set parts = pt.split(' — ', 1) %}
-              <dt>{{ parts[0] }}</dt><dd>{{ parts[1] }}</dd>
-            {% else %}
-              <dt>{{ pt }}</dt>
-            {% endif %}
+    <h3>Key Points</h3>
+    {% set pts = data.key_points.replace('\r\n', '\n') %}
+    {% if '|' in pts %}{% set items = pts.split('|') %}
+    {% elif '\n' in pts %}{% set items = pts.split('\n') %}
+    {% else %}{% set items = [pts] %}{% endif %}
+    <ul style="margin:0;padding-left:1.4em;line-height:1.8;font-size:0.93rem;color:#333">
+      {% for pt in items %}
+        {% set pt = pt.strip().lstrip('-•* ') %}
+        {% if pt %}<li>{{ pt }}</li>{% endif %}
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {% if source_type == 'amazon' and data.get('tech_stack') %}
+  <div class="section">
+    <h3>Tech Stack</h3>
+    {% set ts = data.tech_stack.replace('\r\n', '\n') %}
+    {% if '|' in ts %}{% set items = ts.split('|') %}
+    {% elif '\n' in ts %}{% set items = ts.split('\n') %}
+    {% else %}{% set items = [ts] %}{% endif %}
+    <dl class="tech-stack">
+      {% for pt in items %}
+        {% set pt = pt.strip() %}
+        {% if pt %}
+          {% if ' — ' in pt %}
+            {% set parts = pt.split(' — ', 1) %}
+            <dt>{{ parts[0] }}</dt><dd>{{ parts[1] }}</dd>
+          {% else %}
+            <dt>{{ pt }}</dt>
           {% endif %}
-        {% endfor %}
-      </dl>
-    {% else %}
-      <h3>Key Points</h3>
-      {% set pts = data.key_points.replace('\r\n', '\n') %}
-      {% if '|' in pts %}{% set items = pts.split('|') %}
-      {% elif '\n' in pts %}{% set items = pts.split('\n') %}
-      {% else %}{% set items = [pts] %}{% endif %}
-      <ul style="margin:0;padding-left:1.4em;line-height:1.8;font-size:0.93rem;color:#333">
-        {% for pt in items %}
-          {% set pt = pt.strip().lstrip('-•* ') %}
-          {% if pt %}<li>{{ pt }}</li>{% endif %}
-        {% endfor %}
-      </ul>
-    {% endif %}
+        {% endif %}
+      {% endfor %}
+    </dl>
   </div>
   {% endif %}
 
