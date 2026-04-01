@@ -220,12 +220,9 @@ echo "  /ps:excalidraw <description>     — generate a diagram/chart (needs: pi
 echo "  /ps:web                          — browse all history in browser"
 echo "  /ps:bot-telegram                 — Telegram bot: chat with Claude Code from your phone"
 echo ""
-echo "Manage:"
-echo "  # Check for updates"
-echo "  curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPO/main/install.sh | bash -s -- --version-check"
-echo ""
-echo "  # Update to latest"
-echo "  curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPO/main/install.sh | bash -s -- --update"
-echo ""
-echo "  # Install specific version"
-echo "  curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPO/main/install.sh | bash -s -- --version v1.2.0"
+if [ "$MODE" = "remote" ]; then
+  echo "What's new in $TARGET_VERSION:"
+  curl -fsSL "$GITHUB_API/releases/latest" 2>/dev/null \
+    | python3 -c "import sys,json; r=json.load(sys.stdin); print(r.get('body',''))" \
+    | head -20
+fi

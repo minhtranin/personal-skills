@@ -99,6 +99,11 @@ def render(
             print(f"  - {err}", file=sys.stderr)
         sys.exit(1)
 
+    # Normalize all text elements to clean sans-serif font (3 = Nunito/clean)
+    for el in data.get("elements", []):
+        if el.get("type") == "text":
+            el["fontFamily"] = 3
+
     # Compute viewport size from element bounding box
     elements = [e for e in data["elements"] if not e.get("isDeleted")]
     min_x, min_y, max_x, max_y = compute_bounding_box(elements)

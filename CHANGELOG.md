@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-04-01
+
+### Fixed
+- `excalidraw` renderer: all text elements now use fontFamily `3` (Nunito clean sans-serif) instead of the default hand-drawn Virgil font — diagrams are now readable at all sizes
+- `install.sh`: replaced "Manage:" curl command block at end of install output with latest release changelog from GitHub API
+
 ## [0.5.2] - 2026-03-30
 
 ### Fixed
