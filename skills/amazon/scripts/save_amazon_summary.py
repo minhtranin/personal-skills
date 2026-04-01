@@ -50,6 +50,18 @@ def main():
     slug = url_to_slug(args.slug)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
+    # Copy diagram to persistent location so web server can serve it later
+    diagram_png = args.diagram_png
+    if diagram_png:
+        src = Path(diagram_png)
+        if src.exists():
+            diagrams_dir = data_dir / "diagrams"
+            diagrams_dir.mkdir(parents=True, exist_ok=True)
+            dest = diagrams_dir / f"{slug}.png"
+            import shutil
+            shutil.copy2(src, dest)
+            diagram_png = str(dest)
+
     entry = {
         "slug": slug,
         "url": args.url,
@@ -60,7 +72,7 @@ def main():
         "key_points": args.key_points,
         "tech_stack": args.tech_stack,
         "text": args.text[:4000],
-        "diagram_png": args.diagram_png,
+        "diagram_png": diagram_png,
         "date": now,
     }
 

@@ -7,6 +7,17 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.5.8] - 2026-04-02
+
+### Fixed
+- `save_medium.py`, `save_summary.py` (tube), `save_github_summary.py`, `save_amazon_summary.py`: diagram PNG is now copied from `/tmp/` to a persistent `~/.{medium,youtube,github,amazon}-summary/diagrams/<slug>.png` on save — diagrams no longer disappear after reboot
+- All four skills now store the persistent path in `diagram_png` so the web server at `/medium/<slug>`, `/youtube/<id>`, etc. can always serve the image
+
+### Changed
+- `ps:medium-summary` SKILL.md Step 3: diagram instruction updated to generate **full architectural/technical diagrams** (not concept map summaries), and to re-call `save_medium.py` with `--diagram-png` after rendering so the persistent copy is made
+- `ps:tube-summary` SKILL.md Step 6: same full-diagram instruction + persistent path note
+- `ps:github-summary` SKILL.md diagram step: persistent path note added
+
 ## [0.5.7] - 2026-04-01
 
 ### Fixed

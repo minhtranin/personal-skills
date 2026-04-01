@@ -103,20 +103,16 @@ bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/de
 
 If `skip`: inform and stop.
 
-If `ok`: generate a layered architecture diagram. Each tech/service box label format:
+If `ok`: generate a **full architectural diagram** — not a summary. Include all AWS services, their configurations, data flows, integration patterns, IAM boundaries, and trade-offs described in the article. Each service box:
 ```
 ServiceName
-<short purpose phrase>
+<purpose + key config detail>
 ```
-Example: `Amazon Bedrock\nFM provider\nper-agent model selection`
-
-Group by layer: Interface → API → Compute/Agents → Intelligence → Observability → Storage
-
-Write to `/tmp/amazon_diagram.excalidraw`, render:
+Group by layer: Interface → API → Compute/Agents → Intelligence → Observability → Storage. Add flow arrows between layers showing data movement and call direction. Write to `/tmp/amazon_diagram.excalidraw`, render:
 
 ```bash
 REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
 cd "$REFS" && uv run python render_excalidraw.py /tmp/amazon_diagram.excalidraw --output /tmp/amazon_diagram.png
 ```
 
-Display PNG with Read tool. Update entry with `--diagram-png /tmp/amazon_diagram.png` (include all other args too).
+Display PNG with Read tool. Then update the saved entry — `save_amazon_summary.py` will automatically copy the PNG from `/tmp/` to a persistent `~/.amazon-summary/diagrams/<slug>.png` (include all other args too).

@@ -104,14 +104,14 @@ bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/de
 
 If `skip`: tell the user excalidraw deps are not installed and stop.
 
-If `ok`: generate a concept map — video title as central box, key points as connected leaf nodes grouped by theme. Write to `/tmp/tube_diagram.excalidraw`, render:
+If `ok`: generate a **full architectural/technical diagram** — not a summary. Include all technical details, flows, components, trade-offs, and code patterns from the video. Write to `/tmp/tube_diagram.excalidraw`, render:
 
 ```bash
 REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
 cd "$REFS" && uv run python render_excalidraw.py /tmp/tube_diagram.excalidraw --output /tmp/tube_diagram.png
 ```
 
-Display PNG with the Read tool. Then update the saved entry with the diagram path:
+Display PNG with the Read tool. Then update the saved entry — `save_summary.py` will automatically copy the PNG from `/tmp/` to a persistent `~/.youtube-summary/diagrams/<video_id>.png`:
 
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \

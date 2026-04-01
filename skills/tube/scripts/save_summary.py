@@ -39,6 +39,18 @@ def main():
     video_id = sanitize_id(args.video_id)
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
 
+    # Copy diagram to persistent location so web server can serve it later
+    diagram_png = args.diagram_png
+    if diagram_png:
+        src = Path(diagram_png)
+        if src.exists():
+            import shutil
+            diagrams_dir = data_dir / "diagrams"
+            diagrams_dir.mkdir(parents=True, exist_ok=True)
+            dest = diagrams_dir / f"{video_id}.png"
+            shutil.copy2(src, dest)
+            diagram_png = str(dest)
+
     # Save individual summary file
     entry = {
         "video_id": video_id,
@@ -47,7 +59,7 @@ def main():
         "summary": args.summary,
         "key_points": args.key_points,
         "transcript": args.transcript,
-        "diagram_png": args.diagram_png,
+        "diagram_png": diagram_png,
         "date": now,
     }
     summary_file = data_dir / f"{video_id}.json"

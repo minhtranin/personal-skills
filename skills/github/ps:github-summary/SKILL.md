@@ -116,22 +116,14 @@ bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/de
 
 If `skip`: tell user excalidraw deps are not installed and stop.
 
-If `ok`: Generate an Excalidraw concept map showing:
-- **Center box**: repo name + one-line description
-- **Architecture quadrants** (group by theme from file tree + README):
-  - Tech Stack (languages, frameworks, key deps)
-  - Structure (main dirs/modules from file tree)
-  - Features (key capabilities from README)
-  - Activity (stars, forks, recent commit topics)
-
-Use `fontFamily: 2` (sans-serif). Write to `/tmp/github_diagram.excalidraw`, render:
+If `ok`: Generate a **full architectural diagram** — not a concept map summary. Include all technical depth from the repo: directory structure, key modules and their responsibilities, data flows, tech stack details, API surface, configuration patterns, and how components connect. Cover everything visible from the README and file tree. Write to `/tmp/github_diagram.excalidraw`, render:
 
 ```bash
 REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
 cd "$REFS" && uv run python render_excalidraw.py /tmp/github_diagram.excalidraw --output /tmp/github_diagram.png --scale 2
 ```
 
-Display PNG with the Read tool. Then update saved entry:
+Display PNG with the Read tool. Then update saved entry — `save_github_summary.py` will automatically copy the PNG from `/tmp/` to a persistent `~/.github-summary/diagrams/<slug>.png`:
 
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/github/save_github_summary.py" \

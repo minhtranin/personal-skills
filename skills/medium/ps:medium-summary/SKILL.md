@@ -59,11 +59,18 @@ End with: *"Saved. Browse history: `/ps:web`. Want a diagram? (y/n)"* — or ski
 bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/dev/null && echo "ok" || echo "skip"
 ```
 
-If `skip`: inform user and stop. If `ok`: generate concept map (title = central box, key points = leaf nodes grouped by theme). Write to `/tmp/medium_diagram.excalidraw`, render:
+If `skip`: inform user and stop. If `ok`: generate a **full architectural/technical diagram** — not a summary. The diagram should be dense with all technical detail from the article: architectures, flows, code patterns, trade-offs, components, and relationships. Aim for depth over brevity. Write to `/tmp/medium_diagram.excalidraw`, render:
 
 ```bash
 REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
 cd "$REFS" && uv run python render_excalidraw.py /tmp/medium_diagram.excalidraw --output /tmp/medium_diagram.png
 ```
 
-Display PNG with Read tool. Update saved entry with `--diagram-png /tmp/medium_diagram.png`.
+Display PNG with Read tool. Then update the saved entry — `save_medium.py` will automatically copy the PNG from `/tmp/` to a persistent `~/.medium-summary/diagrams/<slug>.png`:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
+  --slug "<SLUG>" --url "<URL>" --title "<TITLE>" --author "<AUTHOR>" \
+  --summary "<SUMMARY>" --key-points "<KEY_POINTS>" \
+  --diagram-png /tmp/medium_diagram.png
+```
