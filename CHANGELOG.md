@@ -7,7 +7,7 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-## [0.6.0] - 2026-04-02
+## [thuanvo-gift-0.1] - 2026-04-02
 
 ### Changed
 - All summarizer skills now use **ASCII tree / hierarchy style** output instead of flat markdown headers

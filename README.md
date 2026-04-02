@@ -43,20 +43,3 @@ When running the bot, you can use these from Telegram:
 | `/provider <name>` | Switch AI provider (anthropic/minimax/zai) |
 
 All summaries are cached locally — re-running the same URL returns instantly. Pass `--refresh` to re-fetch.
-
-## Requirements
-
-- `curl` + `python3`
-- Telegram bot: run `/ps:bot-telegram` for setup wizard
-- Jira skills: `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_URL` env vars
-- Slack skills: tokens stored automatically
-
-## Multi-Provider Support
-
-The Telegram bot supports multiple AI providers:
-
-- **Anthropic** (default) — Claude models
-- **MiniMax** — Use `ccm` in fish shell to get API key
-- **ZAI** — Use `ccz` in fish shell to get API key
-
-Switch providers with `/provider minimax` or `/provider zai` in Telegram.
