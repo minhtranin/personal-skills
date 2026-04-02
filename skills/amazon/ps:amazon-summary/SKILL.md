@@ -65,21 +65,34 @@ Separate entries with `|` (pipe).
 
 ### Output to user
 
+Use **ASCII tree / hierarchy style** for all output. Format as follows:
+
 ```
-## <TITLE>
-**Category:** <category> | **Author:** <author> | **Source:** [AWS Blog](<url>)
+<SLUG> — <title>
+├── Category  : <category>
+├── Author    : <author>
+└── URL       : <url>
 
-### Summary
-<4-paragraph narrative>
+SUMMARY
+├── PROBLEM
+│   └── <what pain/gap the company faced>
+├── SOLUTION
+│   └── <what they built, which AWS services are central, how components work together>
+├── BUILD & DECISIONS
+│   └── <key technical choices: model selection, guardrails, frameworks, why specific services>
+└── OUTCOMES & LESSONS
+    └── <measurable results + non-obvious insights worth remembering>
 
-### Key Points
-- <insight>
-- <insight>
-...
+KEY POINTS
+├── <insight 1>
+├── <insight 2>
+├── <insight 3>
+└── <insight N>
 
-### Tech Stack
-<Name — description>
-...
+TECH STACK
+├── <ServiceName> — <what it does in this project>
+├── <ServiceName> — <what it does in this project>
+└── <ServiceName> — <what it does in this project>
 ```
 
 Then: *"Saved. Browse history: `/ps:web`. Want a diagram? (y/n)"* — skip if `--diagram` flag.

@@ -57,20 +57,31 @@ Using the parent message and all replies, produce:
 
 ## Step 5 — Output immediately
 
-Present the full result right away:
+Use **ASCII tree / hierarchy style** for all output. Format as follows:
 
 ```
-## #<channel> — <thread topic>
-**Replies:** <count> · **Participants:** <names> · **Date:** <date>
+#<channel> — <thread topic>
+├── Replies      : <count>
+├── Participants : <names>
+└── Date         : <date>
 
-### Summary
-...
+SUMMARY
+└── <3–5 sentences: what the thread is about, main question/topic, how it was resolved or where it stands>
 
-### Key Points
-...
+KEY POINTS
+├── DECISIONS
+│   └── <key decisions made>
+├── ACTION ITEMS
+│   └── <things people agreed to do>
+├── OPEN QUESTIONS
+│   └── <unresolved questions>
+└── NOTABLE REACTIONS
+    └── <any emoji reactions or strong sentiments worth noting>
 
-### Participants
-...
+PARTICIPANTS
+├── <name> — <their main position/role in the discussion>
+├── <name> — <their main position/role in the discussion>
+└── <name> — <their main position/role in the discussion>
 ```
 
 Then on a new line: *"Browse all history with `/ps:web`. Want a diagram for this? (y/n)"*

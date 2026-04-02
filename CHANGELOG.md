@@ -7,6 +7,18 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-02
+
+### Changed
+- All summarizer skills now use **ASCII tree / hierarchy style** output instead of flat markdown headers
+- Each skill has a consistent tree structure tailored to its content type:
+  - `ps:jira-summary` — metadata header + SUMMARY + KEY POINTS (PROBLEM/SCOPE/FIX/ALTERNATIVES/BLOCKERS/DECISION) + COMMENT HIGHLIGHTS
+  - `ps:tube-summary` — VIDEO_ID header + SUMMARY + KEY POINTS
+  - `ps:medium-summary` — SLUG/Author/URL header + SUMMARY + KEY POINTS
+  - `ps:amazon-summary` — metadata header + SUMMARY (PROBLEM/SOLUTION/BUILD/OUTCOMES) + KEY POINTS + TECH STACK
+  - `ps:github-summary` — repo/stars header + SUMMARY + KEY POINTS (PURPOSE/TECH STACK/ARCHITECTURE/FEATURES/ACTIVITY/GETTING STARTED)
+  - `ps:slack-summary` — channel/replies header + SUMMARY + KEY POINTS (DECISIONS/ACTION ITEMS/OPEN QUESTIONS/NOTABLE REACTIONS) + PARTICIPANTS
+
 ## [0.5.8] - 2026-04-02
 
 ### Fixed

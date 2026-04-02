@@ -73,18 +73,31 @@ Using the fetched data, produce:
 
 ## Step 4 — Output to user
 
-Present in clean markdown:
+Use **ASCII tree / hierarchy style** for all output. Format as follows:
 
 ```
-## <owner>/<repo> ⭐ <stars>
-**<description>**
-*<language> · <license> · updated <updated_at>*
+<owner>/<repo> ★ <stars>
+├── Description : <description>
+├── Language    : <language>
+├── License     : <license>
+└── Updated     : <updated_at>
 
-### Summary
-...
+SUMMARY
+└── <3–5 sentences: what the repo does, who it's for, core tech approach, maturity/activity>
 
-### Key Points
-...
+KEY POINTS
+├── PURPOSE
+│   └── <use case and target audience>
+├── TECH STACK
+│   └── <languages, frameworks, notable deps>
+├── ARCHITECTURE
+│   └── <highlights inferred from file tree + README>
+├── NOTABLE FEATURES
+│   └── <standout capabilities>
+├── ACTIVITY
+│   └── <stars, recent commits, last update>
+└── GETTING STARTED
+    └── <install/usage steps from README>
 ```
 
 Then: *"Want a diagram of this repo? (y/n)"*

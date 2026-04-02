@@ -42,7 +42,24 @@ Produce immediately from the `text`:
 1. **Summary** — 3–5 sentences: problem, approach, conclusion.
 2. **Key Points** — 5–10 concrete bullets (include code/commands if relevant).
 
-**Output to user right away**, then immediately save (do not wait for user response):
+**Output to user right away** using **ASCII tree / hierarchy style**, then immediately save (do not wait for user response):
+
+```
+<SLUG> — <title>
+├── Author    : <author>
+└── URL       : <url>
+
+SUMMARY
+└── <3–5 sentences: problem, approach, conclusion>
+
+KEY POINTS
+├── <point 1>
+├── <point 2>
+├── <point 3>
+├── <point 4>
+├── <point 5>
+└── <point N>
+```
 
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \

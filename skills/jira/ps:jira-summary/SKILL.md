@@ -54,18 +54,41 @@ Using `description` + all `comments`:
 
 ## Step 5 — Output immediately
 
+Use **ASCII tree / hierarchy style** for all output. Format as follows:
+
 ```
-## PROJ-123 — <title>
-**Status:** <status> · **Assignee:** <assignee> · **Priority:** <priority>
+<KEY> — <title>
+├── Status    : <status>
+├── Priority  : <priority>
+├── Reporter  : <reporter>
+├── Assignee  : <assignee>
+├── Created   : <created>
+└── Updated   : <updated>
 
-### Summary
-...
+SUMMARY
+└── <3–5 sentence summary of the issue, current status, and what's needed>
 
-### Key Points
-...
+KEY POINTS
+├── PROBLEM
+│   └── <describe the core problem>
+├── SCOPE
+│   └── <who/what is affected>
+├── FIX / REQUIREMENT
+│   └── <what needs to be done>
+├── ALTERNATIVES (if any)
+│   └── <alternative approaches discussed>
+├── BLOCKERS (if any)
+│   └── <any blockers>
+└── DECISION / NEXT STEPS
+    └── <agreed outcome and next steps>
 
-### Comment Highlights
-...
+COMMENT HIGHLIGHTS  (only if >3 comments — pick 2–3 most significant)
+├── [<date>] <author>
+│   └── <highlight of their comment>
+├── [<date>] <author>
+│   └── <highlight of their comment>
+└── [<date>] <author>
+    └── <highlight of their comment>
 ```
 
 Then on a new line: *"Browse history with `/ps:web`. Want a diagram for this? (y/n)"*

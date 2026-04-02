@@ -78,7 +78,25 @@ Using the transcript (or video description if no transcript was available), prod
 
 ## Step 7 — Output to user immediately
 
-Present the summary and key points in clean markdown.
+Use **ASCII tree / hierarchy style** for all output. Format as follows:
+
+```
+<VIDEO_ID> — <title>
+├── URL       : <url>
+├── Duration  : <duration if available>
+└── Fetched   : <date>
+
+SUMMARY
+└── <3–5 sentence overview: what the video is about, main argument, conclusion>
+
+KEY POINTS
+├── <point 1>
+├── <point 2>
+├── <point 3>
+├── <point 4>
+├── <point 5>
+└── <point N>
+```
 
 Then on a new line: *"Browse all history with `/ps:web`. Want a diagram for this? (y/n)"*
 
