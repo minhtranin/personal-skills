@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [junvu-gift-02] - 2026-04-15
+
+### Added
+- `ps:pr-create` skill — create GitHub PRs using team standard format (FEAT/FIX prefix, GRAP ticket, Jira link, short bullet summary, no co-author)
+
 ## [thuanvo-gift-0.1] - 2026-04-02
 
 ### Changed
