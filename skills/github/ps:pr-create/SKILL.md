@@ -1,6 +1,6 @@
 ---
 name: ps:pr-create
-description: Create a GitHub PR using the team's standard format — FEAT/FIX prefix, GRAP ticket in title, Jira link + bullet-point description, no co-author. Use when the user runs /ps:pr-create <base-branch> [jira-ticket] or asks to create a PR.
+description: Create a GitHub PR using the team's standard format — FEAT/FIX prefix, GRAP ticket in title, Jira link + table-style description, no co-author. Use when the user runs /ps:pr-create <base-branch> [jira-ticket] or asks to create a PR.
 argument-hint: <base-branch> [jira-ticket]
 allowed-tools: [Bash]
 ---
@@ -59,23 +59,25 @@ If `jira-ticket` was not passed as argument, extract it from the branch name:
 ```
 Example: `FEAT: GRAP-18762 Improve UI and fix data issues in Other loans/Debt obligations`
 
-**Description format:**
+**Description format (table style):**
 ```
 ## Summary
 
 https://grapplefinance.atlassian.net/browse/<JIRA-TICKET>    ← omit if no ticket
 
-- <short bullet 1>
-- <short bullet 2>
-- <short bullet 3>
-...
+| Area | Fix | Impact |
+|------|-----|--------|
+| **<Area 1>** | <what was fixed> | <result/impact> |
+| **<Area 2>** | <what was fixed> | <result/impact> |
+| **<Area 3>** | <what was fixed> | <result/impact> |
 ```
 
 Rules:
-- Keep each bullet short and high-level — one line max, no details
-- Group related commits into a single bullet, don't list every commit separately
-- Aim for 3–5 bullets total regardless of how many commits there are
-- Use plain language, no markdown headers inside bullets
+- Use a **table** with 3 columns: Area, Fix, Impact
+- Group related commits into one table row, don't list every commit separately
+- Aim for 3–5 rows total regardless of how many commits there are
+- Bold the Area column for readability
+- Keep Fix and Impact short — one line max each
 - Do NOT add any co-author or "Generated with" lines
 
 ---

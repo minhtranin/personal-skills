@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [junvu-gift-03] - 2026-04-15
+
+### Changed
+- `ps:pr-create` — PR description now uses table format (Area | Fix | Impact) instead of bullet points for better readability on GitHub
+
 ## [junvu-gift-02] - 2026-04-15
 
 ### Added
