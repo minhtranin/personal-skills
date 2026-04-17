@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [junvo-gift-05] - 2026-04-17
+
+### Changed
+- `ps:jira-plantask` — added task design rules: no file overlap between tasks, include Acceptance Criteria and Where to Test in every task
+
 ## [junvu-gift-04] - 2026-04-17
 
 ### Added

@@ -121,10 +121,11 @@ QUICK TEST AREAS (end-to-end)
 
 **Task design rules:**
 - Each task must be independently implementable (no circular dependencies between tasks)
+- **No file overlap** — each file must be owned by exactly one task to avoid merge conflicts
 - Tasks should be ordered so earlier tasks don't block later ones
 - Prefer small, focused tasks (1–3 files each) over large catch-all tasks
 - Follow the conventions and patterns found in Step 3 exactly — no new abstractions unless required
-- Include a test/verify step in every task description
+- Include Acceptance Criteria and Where to Test in every task description
 
 ---
 
