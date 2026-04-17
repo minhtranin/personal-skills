@@ -7,6 +7,17 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [junvu-gift-04] - 2026-04-17
+
+### Added
+- `scripts/jira/jira_adf.py` — markdown-to-ADF (Atlassian Document Format) converter supporting headings, tables, bullet lists, ordered lists, bold text, code blocks, and horizontal rules
+- Subtask descriptions now render as **proper Jira formatting** (headings, tables, bullet lists) instead of flat text paragraphs
+
+### Changed
+- `ps:jira-plantask` — subtask description template redesigned: `## Goal` + `## Changes` (Area|Change|Impact table) + `## Acceptance Criteria` + `## Where to Test`
+- `ps:jira-plantask` — inline `text_to_adf` replaced with shared `jira_adf` module in both create (Step 6) and edit (Step 9) scripts
+- `ps:jira-plantask` — custom subtask flow (Step 7) updated to collect changes as table rows
+
 ## [junvu-gift-03] - 2026-04-15
 
 ### Changed
