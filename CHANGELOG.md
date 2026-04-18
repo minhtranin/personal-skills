@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [junvo-gift-06] - 2026-04-18
+
+### Fixed
+- `install.sh` — corrected Antigravity skills install path from `~/.gemini/antigravity/global_skills` to `~/.gemini/antigravity/skills`
+
 ## [junvo-gift-05] - 2026-04-17
 
 ### Changed
