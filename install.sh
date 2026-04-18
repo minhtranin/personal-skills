@@ -25,7 +25,7 @@ VERSION_FILE="$SCRIPTS_INSTALL_DIR/.version"
 
 # Agent commands directories
 CLAUDE_DIR="$HOME/.claude/skills"                          # folder-per-skill structure
-ANTIGRAVITY_DIR="$HOME/.gemini/antigravity/global_skills"  # folder-per-skill structure
+ANTIGRAVITY_DIR="$HOME/.gemini/antigravity/skills"          # folder-per-skill structure
 OPENCODE_DIR="$HOME/.opencode/commands"
 
 # ── Parse args ───────────────────────────────────────────────────────────────
