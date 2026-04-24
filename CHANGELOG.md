@@ -7,6 +7,14 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [JUNVO-08] - 2026-04-24
+
+### Added
+- `ps:summary` — unified summary skill that auto-detects content type (YouTube, Medium, Jira, GitHub, AWS/Amazon blog, Slack) from URL or issue key using a lightweight Python detector (`detect_type.py`)
+
+### Removed
+- `ps:tube-summary`, `ps:medium-summary`, `ps:jira-summary`, `ps:github-summary`, `ps:amazon-summary`, `ps:slack-summary` — replaced by `ps:summary`
+
 ## [junvo-gift-07] - 2026-04-24
 
 ### Removed
