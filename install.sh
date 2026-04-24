@@ -142,7 +142,7 @@ fi
 # ── 0. Clean up retired commands ─────────────────────────────────────────────
 
 # Commands replaced by ps:summary in JUNVO-08
-RETIRED_COMMANDS="ps:tube-summary ps:medium-summary ps:jira-summary ps:github-summary ps:amazon-summary ps:slack-summary"
+RETIRED_COMMANDS="ps:tube-summary ps:medium-summary ps:jira-summary ps:github-summary ps:amazon-summary ps:slack-summary ps:excalidraw"
 
 for cmd in $RETIRED_COMMANDS; do
   # Flat .md style (Claude Code, OpenCode)
