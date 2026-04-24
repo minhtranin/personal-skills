@@ -139,6 +139,20 @@ if [ "$MODE" = "remote" ]; then
   fi
 fi
 
+# ── 0. Clean up retired commands ─────────────────────────────────────────────
+
+# Commands replaced by ps:summary in JUNVO-08
+RETIRED_COMMANDS="ps:tube-summary ps:medium-summary ps:jira-summary ps:github-summary ps:amazon-summary ps:slack-summary"
+
+for cmd in $RETIRED_COMMANDS; do
+  # Flat .md style (Claude Code, OpenCode)
+  for dir in "$CLAUDE_DIR" "$OPENCODE_DIR"; do
+    [ -f "$dir/$cmd.md" ] && rm -f "$dir/$cmd.md" && echo "  ✗ removed $dir/$cmd.md"
+  done
+  # Folder-per-skill style (Antigravity)
+  [ -d "$ANTIGRAVITY_DIR/$cmd" ] && rm -rf "$ANTIGRAVITY_DIR/$cmd" && echo "  ✗ removed $ANTIGRAVITY_DIR/$cmd"
+done
+
 # ── 1. Install scripts ───────────────────────────────────────────────────────
 
 echo "→ Installing helper scripts..."
