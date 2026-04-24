@@ -23,7 +23,6 @@ curl -fsSL https://raw.githubusercontent.com/minhtranin/personal-skills/main/ins
 | `/ps:slack-summary <thread-url>` | Summarize a Slack thread |
 | `/ps:slack-answer <thread-url>` | Research codebase, draft reply, ask confirmation |
 | `/ps:slack_post <channel> <message>` | Post new message to any Slack channel/DM |
-| `/ps:excalidraw <description>` | Generate diagram and render to PNG |
 | `/ps:web` | Browse all history in a local web UI |
 
 ### Telegram Bot Commands

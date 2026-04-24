@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [junvo-gift-07] - 2026-04-24
+
+### Removed
+- `ps:excalidraw` skill — command removed (excalidraw scripts remain as shared renderer for other skills)
+
 ## [junvo-gift-06] - 2026-04-18
 
 ### Fixed

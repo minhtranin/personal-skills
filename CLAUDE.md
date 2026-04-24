@@ -40,7 +40,6 @@ skills/<namespace>/
 | `slack` | `/ps-slack-login`, `/ps-slack-summary` | Active |
 | `github` | `/ps:github-summary` | Active |
 | `frontend` | `/ps:frontend-ui` | Active |
-| `excalidraw` | `/ps:excalidraw` | Active |
 | `amazon` | `/ps:amazon-summary` | Active |
 
 ## Adding a new skill namespace
