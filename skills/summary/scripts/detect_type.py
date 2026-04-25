@@ -5,7 +5,7 @@ import sys, re
 def detect(s):
     s = s.strip()
     if "youtube.com" in s or "youtu.be" in s:          return "youtube"
-    if "medium.com"  in s or "freedium" in s:          return "medium"
+    if any(d in s for d in ("medium.com", "freedium", "gitconnected.com", "towardsdatascience.com", "betterprogramming.pub", "plainenglish.io")): return "medium"
     if "slack.com/archives" in s:                       return "slack"
     if "github.com"  in s:                             return "github"
     if "aws.amazon.com" in s or "amazon.com/blogs" in s or "amazon.science" in s: return "amazon"

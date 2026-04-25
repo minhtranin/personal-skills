@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [VOXUANTHUAN-Cr7] - 2026-04-25
+
+### Fixed
+- `detect_type.py` — recognize Medium partner domains: `gitconnected.com`, `towardsdatascience.com`, `betterprogramming.pub`, `plainenglish.io`
+- `ps:summary` SKILL.md — all 6 save sections now document required CLI args (`--slug`, `--url`, `--summary`, etc.) instead of bare commands
+
 ## [JUNVO-08] - 2026-04-24
 
 ### Added

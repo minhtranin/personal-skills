@@ -95,9 +95,11 @@ YouTube Summary
 
 **Y7 — Save:**
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py"
+python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
+  --video-id "<id>" --url "<url>" \
+  --title "<title>" --summary "<summary-text>" \
+  --key-points '<json-array>' --transcript "<excerpt>"
 ```
-Pipe JSON: `{ "url", "video_id", "title", "summary", "key_points", "transcript_excerpt" }`
 
 **Y8 — Diagram** (only if `--diagram` or user explicitly asks):
 ```bash
@@ -143,7 +145,11 @@ Medium Summary
 
 **M5 — Save:**
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py"
+python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
+  --slug "<slug-from-url>" --url "<url>" \
+  --title "<title>" --author "<author>" \
+  --summary "<summary-text>" \
+  --key-points '<json-array-of-points>'
 ```
 
 **M6 — Diagram** (only if `--diagram` or user explicitly asks): generate technical architecture diagram, render same as Y8.
@@ -194,7 +200,9 @@ Jira Summary
 
 **J7 — Save:**
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py"
+python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
+  --key "<issue-key>" --url "<url>" \
+  --summary "<summary-text>" --key-points '<json-array>'
 ```
 
 **J8 — Diagram** (only if `--diagram` or user explicitly asks): generate status-flow diagram, render same as Y8.
@@ -234,7 +242,9 @@ GitHub Summary
 
 **G5 — Save:**
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/github/save_github_summary.py"
+python3 "$HOME/.local/share/personal-skills/scripts/github/save_github_summary.py" \
+  --url "<url>" --full-name "<owner>/<repo>" \
+  --summary "<summary-text>" --key-points '<json-array>'
 ```
 
 **G6 — Diagram** (only if `--diagram` or user explicitly asks): generate full architectural diagram with `--scale 2`, render same as Y8.
@@ -278,7 +288,10 @@ Amazon/AWS Summary
 
 **A5 — Save:**
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.py"
+python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.py" \
+  --slug "<slug>" --url "<url>" \
+  --title "<title>" --author "<author>" \
+  --summary "<summary-text>" --key-points '<json-array>'
 ```
 
 **A6 — Diagram** (only if `--diagram` or user explicitly asks): generate AWS architecture diagram grouped by layer (Interface → API → Compute → Intelligence → Observability → Storage), render same as Y8.
@@ -327,7 +340,9 @@ Slack Summary
 
 **S6 — Save:**
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py"
+python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py" \
+  --thread-id "<id>" --url "<url>" \
+  --summary "<summary-text>" --key-points '<json-array>'
 ```
 
 **S7 — Diagram** (only if `--diagram` or user explicitly asks): generate participant interaction diagram, render same as Y8.
