@@ -608,7 +608,6 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "`/medium_summary <url>` — summarize Medium article\n"
         "`/jira_summary <KEY>` — summarize Jira issue\n"
         "`/jira_plantask <KEY>` — plan + break into subtasks\n"
-        "`/excalidraw <desc>` — generate diagram\n"
         "`/web` — launch history web UI\n\n"
         "*Directories*\n"
         "`/adddir /path [label]` — add codebase/knowledge dir\n"
@@ -816,12 +815,6 @@ PS_COMMANDS = {
         "usage": "/jira_plantask <PROJ-123>",
         "desc":  "Plan and break a Jira issue into subtasks",
         "prompt": "Plan and break this Jira issue into implementation subtasks: {args}",
-    },
-    "excalidraw": {
-        "cmd":   "excalidraw",
-        "usage": "/excalidraw <description>",
-        "desc":  "Generate an Excalidraw diagram from a description",
-        "prompt": "Generate an Excalidraw diagram for: {args}",
     },
     "web": {
         "cmd":   "web",
@@ -1120,7 +1113,6 @@ def main():
             BotCommand("medium_summary", "Summarize a Medium article"),
             BotCommand("jira_summary",   "Summarize a Jira issue"),
             BotCommand("jira_plantask",  "Plan & break a Jira issue into subtasks"),
-            BotCommand("excalidraw",     "Generate an Excalidraw diagram"),
             BotCommand("web",            "Launch history web UI"),
             BotCommand("slack_post",     "Post a new message to a Slack channel or DM"),
         ]

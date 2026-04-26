@@ -102,15 +102,12 @@ python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
 ```
 
 **Y8 — Diagram** (only if `--diagram` or user explicitly asks):
-```bash
-bash "$HOME/.local/share/personal-skills/scripts/excalidraw/check_deps.sh" 2>/dev/null && echo "ok" || echo "skip"
-```
-If `ok`: generate full architectural/technical diagram, write to `/tmp/summary_diagram.excalidraw`, then render:
-```bash
-REFS="$HOME/.local/share/personal-skills/scripts/excalidraw/references"
-cd "$REFS" && uv run python render_excalidraw.py /tmp/summary_diagram.excalidraw --output /tmp/summary_diagram.png
-```
-Display the PNG.
+
+Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`.
+
+The diagram should visually represent the architecture, flow, or key concepts from the video using color-coded cards and CSS arrows — no external dependencies, no scripts, pure HTML+CSS. Then tell the user:
+
+> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
 ---
 
@@ -152,7 +149,11 @@ python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
   --key-points '<json-array-of-points>'
 ```
 
-**M6 — Diagram** (only if `--diagram` or user explicitly asks): generate technical architecture diagram, render same as Y8.
+**M6 — Diagram** (only if `--diagram` or user explicitly asks):
+
+Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`. Visualize the article's concepts, architecture, or flow using color-coded cards and CSS arrows. Tell the user:
+
+> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
 ---
 
@@ -205,7 +206,11 @@ python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
   --summary "<summary-text>" --key-points '<json-array>'
 ```
 
-**J8 — Diagram** (only if `--diagram` or user explicitly asks): generate status-flow diagram, render same as Y8.
+**J8 — Diagram** (only if `--diagram` or user explicitly asks):
+
+Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`. Show the issue status flow, affected components, or implementation plan using color-coded cards and CSS arrows. Tell the user:
+
+> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
 ---
 
@@ -247,7 +252,11 @@ python3 "$HOME/.local/share/personal-skills/scripts/github/save_github_summary.p
   --summary "<summary-text>" --key-points '<json-array>'
 ```
 
-**G6 — Diagram** (only if `--diagram` or user explicitly asks): generate full architectural diagram with `--scale 2`, render same as Y8.
+**G6 — Diagram** (only if `--diagram` or user explicitly asks):
+
+Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`. Show the repo architecture, component relationships, or data flow using color-coded cards and CSS arrows. Tell the user:
+
+> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
 ---
 
@@ -294,7 +303,11 @@ python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.p
   --summary "<summary-text>" --key-points '<json-array>'
 ```
 
-**A6 — Diagram** (only if `--diagram` or user explicitly asks): generate AWS architecture diagram grouped by layer (Interface → API → Compute → Intelligence → Observability → Storage), render same as Y8.
+**A6 — Diagram** (only if `--diagram` or user explicitly asks):
+
+Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`. Show the AWS architecture grouped by layer (Interface → Compute → Intelligence → Storage → Observability) using color-coded cards and CSS arrows. Tell the user:
+
+> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
 ---
 
@@ -345,4 +358,29 @@ python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py"
   --summary "<summary-text>" --key-points '<json-array>'
 ```
 
-**S7 — Diagram** (only if `--diagram` or user explicitly asks): generate participant interaction diagram, render same as Y8.
+**S7 — Diagram** (only if `--diagram` or user explicitly asks):
+
+Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`. Show participant interactions, decision flow, or action item owners using color-coded cards and CSS arrows. Tell the user:
+
+> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
+
+---
+
+## HTML Diagram Format (all types)
+
+When generating `/tmp/summary_diagram.html`, follow these rules:
+
+- **Self-contained** — no CDN links, no external scripts, pure HTML + inline CSS
+- **Pick the right visual for each section** — don't default to cards for everything:
+  - **Cards + CSS arrows** → architecture flows, service relationships, step-by-step pipelines
+  - **Table** (`<table>`) → comparisons, migration maps, spec lists, key-value metadata
+  - **Tree** (nested `<ul>` with CSS lines) → hierarchies, file structures, decision trees, org charts
+  - **Horizontal bar / inline progress** (CSS `width %`) → scores, metrics, rankings
+  - **Timeline** (vertical list with connectors) → sequential events, changelogs, phases
+- **Color-coded** — use border + background color pairs to encode meaning (not decoration)
+- **CSS arrows** between cards: vertical (`↓`) and horizontal (`→`) using flex + CSS border tricks — no SVG, no canvas
+- **Numbered steps** where flow order matters
+- **Badges** (small pill labels) for service names, roles, or status
+- **Legend or summary table** at the bottom when there are many components
+- Output path is always `/tmp/summary_diagram.html`
+- Tell the user to open it in Chrome after writing

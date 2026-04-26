@@ -7,6 +7,17 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [VOXUANTHUAN-m10] - 2026-04-26
+
+### Removed
+- `skills/excalidraw/` — entire excalidraw skill dropped (Playwright/Chromium renderer was unreliable due to CDN ESM loading failures in headless mode)
+- All diagram steps across `ps:summary` no longer reference excalidraw scripts or `render_excalidraw.py`
+- `excalidraw` command removed from `ps:bot-telegram` help text, skill registry, and BotFather command list
+
+### Changed
+- `ps:summary` — diagram steps (Y8, M6, J8, G6, A6, S7) now generate a self-contained HTML file at `/tmp/summary_diagram.html` — pure HTML + CSS, no external deps, open directly in Chrome
+- `ps:summary` — HTML diagram format guidelines updated: pick the right visual per section (cards+arrows for flows, `<table>` for comparisons, `<ul>` tree for hierarchies, timeline for sequences, inline bars for metrics)
+
 ## [VOXUANTHUAN-Cr7] - 2026-04-25
 
 ### Fixed
