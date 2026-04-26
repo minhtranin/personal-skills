@@ -55,6 +55,31 @@ Follow the section below that matches Step 1 output.
 
 ---
 
+## Diagram file naming
+
+All diagram files use a timestamped name to avoid collisions:
+
+```bash
+DIAGRAM_FILE="/tmp/summary_diagram_$(date +%Y%m%d_%H%M%S).html"
+```
+
+Use this variable whenever writing a diagram file. Tell the user the exact path after writing.
+
+---
+
+## HTML diagram — base template
+
+The CSS template is pre-built at:
+```
+$HOME/.local/share/personal-skills/scripts/summary/diagram_header.html
+```
+
+**Always read this file first, then append only the `<body>` content** — never regenerate the CSS or `<head>` boilerplate. This makes diagram generation fast. The template already includes styles for: cards, color themes, badges, subcards, vertical/horizontal arrows, tables, trees, timelines, progress bars, and legend maps.
+
+Write the complete file as: template content + your body HTML + `</body></html>`.
+
+---
+
 ## [youtube] YouTube Video
 
 **Y1 — Check history** (skip if `--refresh`):
@@ -68,31 +93,26 @@ Exit 0 = cached — show result and stop.
 bash "$HOME/.local/share/personal-skills/scripts/tube/check_deps.sh"
 ```
 
-**Y3 — Fetch title:**
+**Y3 — Fetch title + transcript in parallel:**
 ```bash
 yt-dlp --get-title "<url>" 2>/dev/null || echo "Unknown Title"
-```
-
-**Y4 — Get transcript:**
-```bash
 bash "$HOME/.local/share/personal-skills/scripts/tube/get_transcript.sh" "<url>"
 ```
 
-**Y5 — Summarize** — 3–5 sentence summary + 5–10 key points from transcript.
+**Y4 — Single pass: save + diagram together**
 
-**Y6 — Save:**
+Run save in background, then immediately generate the HTML diagram:
+
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
-  --video-id "<id>" --url "<url>" \
-  --title "<title>" --summary "<summary-text>" \
-  --key-points '<json-array>' --transcript "<excerpt>"
+  --video-id "<id>" --url "<url>" --title "<title>" \
+  --summary "<summary-text>" --key-points '<json-array>' \
+  --transcript "<excerpt>" &
 ```
 
-**Y7 — Diagram** (always — no terminal output, go straight to HTML):
+Read the base template, then write `$DIAGRAM_FILE` using template CSS + body content that visually represents the architecture, flow, or key concepts from the video.
 
-Generate a self-contained HTML diagram at `/tmp/summary_diagram.html` that visually represents the architecture, flow, or key concepts from the video. Then tell the user:
-
-> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
+Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
 ---
 
@@ -109,22 +129,20 @@ Exit 0 = cached — show result and stop.
 python3 "$HOME/.local/share/personal-skills/scripts/medium/fetch_medium.py" "<url>"
 ```
 
-**M3 — Summarize** — 3–5 sentence summary + 5–8 key points.
+**M3 — Single pass: save + diagram together**
 
-**M4 — Save:**
+Run save in background, then immediately generate the HTML diagram:
+
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
-  --slug "<slug-from-url>" --url "<url>" \
-  --title "<title>" --author "<author>" \
-  --summary "<summary-text>" \
-  --key-points '<json-array-of-points>'
+  --slug "<slug-from-url>" --url "<url>" --title "<title>" \
+  --author "<author>" --summary "<summary-text>" \
+  --key-points '<json-array-of-points>' &
 ```
 
-**M5 — Diagram** (always — no terminal output, go straight to HTML):
+Read the base template, then write `$DIAGRAM_FILE` using template CSS + body content that visualizes the article's concepts, architecture, or flow.
 
-Generate a self-contained HTML diagram at `/tmp/summary_diagram.html` that visualizes the article's concepts, architecture, or flow. Then tell the user:
-
-> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
+Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
 ---
 
@@ -151,7 +169,7 @@ python3 "$HOME/.local/share/personal-skills/scripts/jira/fetch_jira.py" "<issue-
 
 **J5 — Summarize** — 3–5 sentence summary + 5–10 key points (problem, scope, fix, alternatives, blockers, decisions) + 2–3 comment highlights.
 
-**J6 — Output:**
+**J6 — Output to terminal:**
 ```
 Jira Summary
 └── [<TYPE>] <KEY>: <Summary>
@@ -183,9 +201,7 @@ After saving, ask the user:
 
 > Want a visual diagram for this? (y/n)
 
-If yes: generate a self-contained HTML diagram at `/tmp/summary_diagram.html` showing the issue status flow, affected components, or implementation plan. Tell the user:
-
-> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
+If yes: read the base template, write `$DIAGRAM_FILE` with body content showing the issue status flow, affected components, or implementation plan. Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
 ---
 
@@ -202,20 +218,19 @@ Exit 0 = cached — show result and stop.
 python3 "$HOME/.local/share/personal-skills/scripts/github/fetch_github_repo.py" "<url>"
 ```
 
-**G3 — Summarize** — 3–5 sentence summary + 6–10 key points (purpose, tech stack, architecture, features, activity, getting started).
+**G3 — Single pass: save + diagram together**
 
-**G4 — Save:**
+Run save in background, then immediately generate the HTML diagram:
+
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/github/save_github_summary.py" \
   --url "<url>" --full-name "<owner>/<repo>" \
-  --summary "<summary-text>" --key-points '<json-array>'
+  --summary "<summary-text>" --key-points '<json-array>' &
 ```
 
-**G5 — Diagram** (always — no terminal output, go straight to HTML):
+Read the base template, then write `$DIAGRAM_FILE` using template CSS + body content showing the repo architecture, component relationships, or data flow.
 
-Generate a self-contained HTML diagram at `/tmp/summary_diagram.html` showing the repo architecture, component relationships, or data flow. Then tell the user:
-
-> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
+Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
 ---
 
@@ -232,21 +247,19 @@ Exit 0 = cached — show result and stop.
 python3 "$HOME/.local/share/personal-skills/scripts/amazon/fetch_amazon_blog.py" "<url>"
 ```
 
-**A3 — Summarize** — Four-paragraph summary (Problem → Solution → Build & Decisions → Outcomes & Lessons) + 5–8 key insights + tech stack list (`ServiceName — purpose`).
+**A3 — Single pass: save + diagram together**
 
-**A4 — Save:**
+Run save in background, then immediately generate the HTML diagram:
+
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.py" \
-  --slug "<slug>" --url "<url>" \
-  --title "<title>" --author "<author>" \
-  --summary "<summary-text>" --key-points '<json-array>'
+  --slug "<slug>" --url "<url>" --title "<title>" --author "<author>" \
+  --summary "<summary-text>" --key-points '<json-array>' &
 ```
 
-**A5 — Diagram** (always — no terminal output, go straight to HTML):
+Read the base template, then write `$DIAGRAM_FILE` using template CSS + body content showing the AWS architecture grouped by layer (Interface → Compute → Intelligence → Storage → Observability).
 
-Generate a self-contained HTML diagram at `/tmp/summary_diagram.html` showing the AWS architecture grouped by layer (Interface → Compute → Intelligence → Storage → Observability). Then tell the user:
-
-> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
+Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
 ---
 
@@ -272,7 +285,7 @@ Exit codes: 0 = success, 1 = auth expired (re-run check_slack_tokens.sh and retr
 
 **S4 — Summarize** — 3–5 sentence summary + 5–10 key points (decisions, action items, open questions) + participant list with roles.
 
-**S5 — Output:**
+**S5 — Output to terminal:**
 ```
 Slack Summary
 └── #<channel> thread
@@ -303,27 +316,24 @@ After saving, ask the user:
 
 > Want a visual diagram for this? (y/n)
 
-If yes: generate a self-contained HTML diagram at `/tmp/summary_diagram.html` showing participant interactions, decision flow, or action item owners. Tell the user:
-
-> Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
+If yes: read the base template, write `$DIAGRAM_FILE` with body content showing participant interactions, decision flow, or action item owners. Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
 ---
 
-## HTML Diagram Format (all types)
+## HTML diagram body — what to generate
 
-When generating `/tmp/summary_diagram.html`, follow these rules:
+When writing the body content (appended after the base template), pick the right visual per section:
 
-- **Self-contained** — no CDN links, no external scripts, pure HTML + inline CSS
-- **Pick the right visual for each section** — don't default to cards for everything:
-  - **Cards + CSS arrows** → architecture flows, service relationships, step-by-step pipelines
-  - **Table** (`<table>`) → comparisons, migration maps, spec lists, key-value metadata
-  - **Tree** (nested `<ul>` with CSS lines) → hierarchies, file structures, decision trees, org charts
-  - **Horizontal bar / inline progress** (CSS `width %`) → scores, metrics, rankings
-  - **Timeline** (vertical list with connectors) → sequential events, changelogs, phases
-- **Color-coded** — use border + background color pairs to encode meaning (not decoration)
-- **CSS arrows** between cards: vertical (`↓`) and horizontal (`→`) using flex + CSS border tricks — no SVG, no canvas
-- **Numbered steps** where flow order matters
-- **Badges** (small pill labels) for service names, roles, or status
-- **Legend or summary table** at the bottom when there are many components
-- Output path is always `/tmp/summary_diagram.html`
-- Tell the user to open it in Chrome after writing
+| Content type | Visual |
+|---|---|
+| Architecture / service flow | Cards + arrows (use `.card`, `.h-arrow`, `.v-arrow`) |
+| Comparison / migration map | Table (use `.tbl`) |
+| Hierarchy / file tree / org | Tree (use `.tree` with nested `<ul>`) |
+| Sequential steps / phases | Timeline (use `.timeline`, `.tl-item`) |
+| Scores / metrics / rankings | Progress bars (use `.metric`, `.bar-track`, `.bar-fill`) |
+
+Rules:
+- Use color themes to encode meaning: `.orange` = entry/trigger, `.blue` = core logic, `.purple` = AI/LLM, `.red` = storage, `.green` = async/background, `.amber` = queue/buffer, `.teal` = external service
+- Use `.badge` for service labels, `.sub` for internal detail blocks inside a card
+- Use `.footer` + `.mmap` for migration/legend tables at the bottom
+- Body starts with `<h1>` title and ends before `</body></html>`

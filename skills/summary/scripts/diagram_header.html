@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<title>Summary Diagram</title>
+<style>
+/* ── Reset & base ───────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f4f8;padding:36px;color:#1e293b;min-width:900px}
+h1{text-align:center;font-size:21px;font-weight:700;color:#1e3a5f;margin-bottom:28px;letter-spacing:-.3px}
+
+/* ── Layout helpers ─────────────────────────────────────────── */
+.flow{display:flex;flex-direction:column;gap:0;max-width:1080px;margin:0 auto}
+.row{display:flex;align-items:stretch;gap:0}
+.col{display:flex;flex-direction:column;gap:0}
+.spacer{flex:1}
+
+/* ── Cards ──────────────────────────────────────────────────── */
+.card{border-radius:12px;border:2px solid;padding:15px 17px;background:#fff;flex-shrink:0}
+.card h2{font-size:13px;font-weight:700;margin-bottom:9px;text-transform:uppercase;letter-spacing:.4px}
+.card ul{list-style:none;font-size:12.5px;line-height:1.75;color:#334155}
+.card ul li{padding-left:13px;position:relative}
+.card ul li::before{content:"›";position:absolute;left:0;color:#94a3b8}
+.card p{font-size:12.5px;line-height:1.65;color:#334155}
+
+/* card widths */
+.w-sm{width:200px}.w-md{width:280px}.w-lg{width:360px}.w-xl{width:440px}.w-full{width:100%}
+
+/* ── Badges ─────────────────────────────────────────────────── */
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;margin-bottom:8px;letter-spacing:.3px}
+
+/* ── Color themes ───────────────────────────────────────────── */
+.orange{border-color:#c2410c}.orange h2,.orange .badge{color:#c2410c}.orange .badge{background:#ffedd5}
+.amber{border-color:#b45309}.amber h2,.amber .badge{color:#92400e}.amber .badge{background:#fef3c7}
+.blue{border-color:#1d4ed8}.blue h2,.blue .badge{color:#1d4ed8}.blue .badge{background:#dbeafe}
+.green{border-color:#047857}.green h2,.green .badge{color:#047857}.green .badge{background:#d1fae5}
+.red{border-color:#dc2626}.red h2,.red .badge{color:#dc2626}.red .badge{background:#fee2e2}
+.purple{border-color:#6d28d9}.purple h2,.purple .badge{color:#6d28d9}.purple .badge{background:#ede9fe}
+.indigo{border-color:#3730a3}.indigo h2,.indigo .badge{color:#3730a3}.indigo .badge{background:#e0e7ff}
+.teal{border-color:#0f766e}.teal h2,.teal .badge{color:#0f766e}.teal .badge{background:#ccfbf1}
+.rose{border-color:#be123c}.rose h2,.rose .badge{color:#be123c}.rose .badge{background:#ffe4e6}
+.slate{border-color:#64748b}.slate h2{color:#374151}.slate .badge{background:#f1f5f9;color:#475569}
+
+/* ── Subcard ────────────────────────────────────────────────── */
+.sub{background:#f8fafc;border-radius:8px;border-left:3px solid currentColor;padding:8px 10px;margin-top:8px;font-size:12px;line-height:1.6;color:#374151}
+.sub strong{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px;opacity:.6}
+
+/* ── Vertical arrow ─────────────────────────────────────────── */
+.v-arrow{display:flex;align-items:center;height:40px;gap:8px;padding-left:52px}
+.v-arrow .shaft{width:2px;height:40px;background:#94a3b8;position:relative;flex-shrink:0}
+.v-arrow .shaft::after{content:'';position:absolute;bottom:-1px;left:50%;transform:translateX(-50%);border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid #94a3b8}
+.v-arrow .lbl{font-size:11px;color:#64748b;font-style:italic;white-space:nowrap}
+
+/* ── Horizontal arrow ───────────────────────────────────────── */
+.h-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:60px;gap:3px;flex-shrink:0}
+.h-arrow .shaft{display:flex;align-items:center;width:100%}
+.h-arrow .shaft .line{flex:1;height:2px;background:#94a3b8}
+.h-arrow .shaft .head{border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid #94a3b8}
+.h-arrow .lbl{font-size:10px;color:#64748b;font-style:italic;white-space:nowrap;text-align:center}
+
+/* dashed variant */
+.dashed .shaft .line{background:repeating-linear-gradient(90deg,#94a3b8 0,#94a3b8 6px,transparent 6px,transparent 10px);height:2px}
+.dashed .shaft .head{border-left-color:#94a3b8}
+
+/* ── Table ──────────────────────────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px}
+.tbl th{background:#f1f5f9;color:#374151;font-weight:600;padding:7px 10px;text-align:left;border:1px solid #e2e8f0;font-size:11.5px;text-transform:uppercase;letter-spacing:.3px}
+.tbl td{padding:7px 10px;border:1px solid #e2e8f0;color:#334155;vertical-align:top}
+.tbl tr:nth-child(even) td{background:#f8fafc}
+.tbl code{font-family:'Cascadia Code','Fira Code',monospace;font-size:11px;color:#1d4ed8;background:#eff6ff;padding:1px 5px;border-radius:4px}
+
+/* ── Tree ───────────────────────────────────────────────────── */
+.tree{font-size:12.5px;line-height:1.8;color:#334155}
+.tree ul{list-style:none;padding-left:20px;position:relative}
+.tree ul::before{content:'';position:absolute;left:6px;top:0;bottom:8px;width:1px;background:#cbd5e1}
+.tree li{position:relative}
+.tree li::before{content:'';position:absolute;left:-14px;top:13px;width:10px;height:1px;background:#cbd5e1}
+.tree .node{display:inline-flex;align-items:center;gap:6px;padding:1px 0}
+.tree .dot{width:8px;height:8px;border-radius:50%;background:#94a3b8;flex-shrink:0}
+.tree .dot.blue{background:#3b82f6}.tree .dot.green{background:#22c55e}
+.tree .dot.red{background:#ef4444}.tree .dot.purple{background:#a855f7}
+.tree .dot.amber{background:#f59e0b}.tree .dot.teal{background:#14b8a6}
+
+/* ── Timeline ───────────────────────────────────────────────── */
+.timeline{display:flex;flex-direction:column;gap:0;padding-left:28px;position:relative}
+.timeline::before{content:'';position:absolute;left:8px;top:12px;bottom:12px;width:2px;background:#e2e8f0}
+.tl-item{display:flex;align-items:flex-start;gap:14px;position:relative;padding-bottom:18px}
+.tl-dot{width:16px;height:16px;border-radius:50%;border:2px solid;background:#fff;flex-shrink:0;margin-top:2px;margin-left:-28px}
+.tl-body{flex:1}
+.tl-title{font-size:12.5px;font-weight:600;color:#1e293b;margin-bottom:2px}
+.tl-desc{font-size:12px;color:#64748b;line-height:1.55}
+
+/* ── Progress / metric bar ──────────────────────────────────── */
+.metric{margin-bottom:10px}
+.metric-label{display:flex;justify-content:space-between;font-size:12px;color:#374151;margin-bottom:4px}
+.metric-label span:last-child{font-weight:600;color:#1e293b}
+.bar-track{height:8px;background:#e2e8f0;border-radius:99px;overflow:hidden}
+.bar-fill{height:100%;border-radius:99px;background:#3b82f6}
+.bar-fill.green{background:#22c55e}.bar-fill.amber{background:#f59e0b}
+.bar-fill.red{background:#ef4444}.bar-fill.purple{background:#a855f7}
+
+/* ── Note / caption ─────────────────────────────────────────── */
+.note{font-size:11px;color:#94a3b8;font-style:italic;text-align:center;margin-top:6px}
+.tag{display:inline-block;font-size:10.5px;font-weight:600;padding:1px 8px;border-radius:4px;background:#f1f5f9;color:#475569;margin-right:4px}
+
+/* ── Footer / legend ────────────────────────────────────────── */
+.footer{max-width:1080px;margin:20px auto 0}
+.mmap{display:grid;grid-template-columns:1fr 1fr;gap:5px 28px;font-size:12.5px;margin-top:10px}
+.mrow{display:flex;align-items:baseline;gap:8px}
+.mrow code{font-family:'Cascadia Code','Fira Code',monospace;font-size:11.5px;color:#1d4ed8;white-space:nowrap;min-width:120px;display:inline-block}
+.mrow .arr{color:#94a3b8;font-size:14px}
+.mrow em{font-style:normal;color:#374151}
+</style>
+</head>
+<body>
+<!-- DIAGRAM BODY BELOW — only write from <h1> onward -->
