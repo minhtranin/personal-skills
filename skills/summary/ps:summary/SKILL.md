@@ -10,7 +10,7 @@ Summarize any content — YouTube video, Medium article, Jira issue, GitHub repo
 ## Usage
 
 ```
-/ps:summary <url-or-issue-key> [--refresh] [--diagram]
+/ps:summary <url-or-issue-key>
 ```
 
 **Examples:**
@@ -55,62 +55,61 @@ Follow the section below that matches Step 1 output.
 
 ---
 
-## Diagram file naming
+## Diagram output — filename
 
-All diagram files use a timestamped name to avoid collisions:
-
+Always use a timestamped filename:
 ```bash
 DIAGRAM_FILE="/tmp/summary_diagram_$(date +%Y%m%d_%H%M%S).html"
+DIAGRAM_LINK="file://$DIAGRAM_FILE"
 ```
-
-Use this variable whenever writing a diagram file. Tell the user the exact path after writing.
 
 ---
 
-## HTML diagram — base template
+## Diagram output — base CSS template
 
-The CSS template is pre-built at:
+The CSS is pre-built. **Always read this file first**, then append only the `<body>` content — never regenerate CSS or `<head>` boilerplate:
+
 ```
 $HOME/.local/share/personal-skills/scripts/summary/diagram_header.html
 ```
 
-**Always read this file first, then append only the `<body>` content** — never regenerate the CSS or `<head>` boilerplate. This makes diagram generation fast. The template already includes styles for: cards, color themes, badges, subcards, vertical/horizontal arrows, tables, trees, timelines, progress bars, and legend maps.
+Write the complete file as: **template content + your body HTML + `</body></html>`**.
 
-Write the complete file as: template content + your body HTML + `</body></html>`.
+---
+
+## Saving to web history
+
+For all types, persist the record so the web UI can show it. **Instead of storing a text summary, store the diagram file link** so the web history entry is a clickable `file://` URL that opens the HTML diagram directly in Chrome.
+
+Pass `--summary "$DIAGRAM_LINK"` to the save script for non-Jira/non-Slack types.
+
+For Jira and Slack: if the user requests a diagram, also pass `--diagram-path "$DIAGRAM_LINK"` alongside the text summary.
 
 ---
 
 ## [youtube] YouTube Video
 
-**Y1 — Check history** (skip if `--refresh`):
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/tube/lookup_history.py" "<url>"
-```
-Exit 0 = cached — show result and stop.
-
-**Y2 — Check deps:**
+**Y1 — Check deps:**
 ```bash
 bash "$HOME/.local/share/personal-skills/scripts/tube/check_deps.sh"
 ```
 
-**Y3 — Fetch title + transcript in parallel:**
+**Y2 — Fetch title + transcript:**
 ```bash
 yt-dlp --get-title "<url>" 2>/dev/null || echo "Unknown Title"
 bash "$HOME/.local/share/personal-skills/scripts/tube/get_transcript.sh" "<url>"
 ```
 
-**Y4 — Single pass: save + diagram together**
+**Y3 — Generate diagram + save in parallel:**
 
-Run save in background, then immediately generate the HTML diagram:
+Generate diagram: read base CSS template → write `$DIAGRAM_FILE` with body content visualizing the video's architecture, flow, or key concepts.
 
+Save in background:
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
   --video-id "<id>" --url "<url>" --title "<title>" \
-  --summary "<summary-text>" --key-points '<json-array>' \
-  --transcript "<excerpt>" &
+  --summary "$DIAGRAM_LINK" --key-points '[]' --transcript "<excerpt>" &
 ```
-
-Read the base template, then write `$DIAGRAM_FILE` using template CSS + body content that visually represents the architecture, flow, or key concepts from the video.
 
 Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
@@ -118,29 +117,21 @@ Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
 ## [medium] Medium Article
 
-**M1 — Check history** (skip if `--refresh`):
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/medium/lookup_medium.py" "<url>"
-```
-Exit 0 = cached — show result and stop.
-
-**M2 — Fetch article:**
+**M1 — Fetch article:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/medium/fetch_medium.py" "<url>"
 ```
 
-**M3 — Single pass: save + diagram together**
+**M2 — Generate diagram + save in parallel:**
 
-Run save in background, then immediately generate the HTML diagram:
+Generate diagram: read base CSS template → write `$DIAGRAM_FILE` with body content visualizing the article's concepts, architecture, or flow.
 
+Save in background:
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
   --slug "<slug-from-url>" --url "<url>" --title "<title>" \
-  --author "<author>" --summary "<summary-text>" \
-  --key-points '<json-array-of-points>' &
+  --author "<author>" --summary "$DIAGRAM_LINK" --key-points '[]' &
 ```
-
-Read the base template, then write `$DIAGRAM_FILE` using template CSS + body content that visualizes the article's concepts, architecture, or flow.
 
 Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
@@ -156,79 +147,69 @@ Stop if missing.
 
 **J2 — Normalize** — bare key (e.g. `PROJ-123`) used directly; URL → extract issue key from path.
 
-**J3 — Check history** (skip if `--refresh`):
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/jira/lookup_jira.py" "<issue-key>"
-```
-Exit 0 = cached — show result and stop.
-
-**J4 — Fetch issue:**
+**J3 — Fetch issue:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/jira/fetch_jira.py" "<issue-key>"
 ```
 
-**J5 — Summarize** — 3–5 sentence summary + 5–10 key points (problem, scope, fix, alternatives, blockers, decisions) + 2–3 comment highlights.
-
-**J6 — Output to terminal:**
+**J4 — Output summary as tree in terminal:**
 ```
 Jira Summary
-└── [<TYPE>] <KEY>: <Summary>
+└── [<TYPE>] <KEY>: <title>
     ├── Status   : <status>
     ├── Priority : <priority>
     ├── Assignee : <assignee>
     ├── Reporter : <reporter>
-    ├── Fetched  : <date>
     ├── Summary
     │   └── <3-5 sentences>
     ├── Key Points
-    │   ├── • <point>
+    │   ├── • <problem / scope / fix / blockers / decisions>
     │   └── ...
     └── Comment Highlights
         ├── • <highlight>
         └── ...
 ```
 
-**J7 — Save:**
+**J5 — Save text summary:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
   --key "<issue-key>" --url "<url>" \
   --summary "<summary-text>" --key-points '<json-array>'
 ```
 
-**J8 — Ask for diagram:**
-
-After saving, ask the user:
+**J6 — Ask for diagram:**
 
 > Want a visual diagram for this? (y/n)
 
-If yes: read the base template, write `$DIAGRAM_FILE` with body content showing the issue status flow, affected components, or implementation plan. Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
+If yes: read base CSS template → write `$DIAGRAM_FILE` with body content showing issue status flow, affected components, or implementation plan. Then re-save with diagram link:
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
+  --key "<issue-key>" --url "<url>" \
+  --summary "<summary-text>" --key-points '<json-array>' \
+  --diagram-path "$DIAGRAM_LINK"
+```
+
+Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
 ---
 
 ## [github] GitHub Repository
 
-**G1 — Check history** (skip if `--refresh`):
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/github/lookup_github.py" "<url>"
-```
-Exit 0 = cached — show result and stop.
-
-**G2 — Fetch repo:**
+**G1 — Fetch repo:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/github/fetch_github_repo.py" "<url>"
 ```
 
-**G3 — Single pass: save + diagram together**
+**G2 — Generate diagram + save in parallel:**
 
-Run save in background, then immediately generate the HTML diagram:
+Generate diagram: read base CSS template → write `$DIAGRAM_FILE` with body content showing repo architecture, component relationships, or data flow.
 
+Save in background:
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/github/save_github_summary.py" \
   --url "<url>" --full-name "<owner>/<repo>" \
-  --summary "<summary-text>" --key-points '<json-array>' &
+  --summary "$DIAGRAM_LINK" --key-points '[]' &
 ```
-
-Read the base template, then write `$DIAGRAM_FILE` using template CSS + body content showing the repo architecture, component relationships, or data flow.
 
 Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
@@ -236,28 +217,21 @@ Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
 ## [amazon] AWS / Amazon Blog
 
-**A1 — Check history** (skip if `--refresh`):
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/amazon/lookup_amazon.py" "<url>"
-```
-Exit 0 = cached — show result and stop.
-
-**A2 — Fetch article:**
+**A1 — Fetch article:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/amazon/fetch_amazon_blog.py" "<url>"
 ```
 
-**A3 — Single pass: save + diagram together**
+**A2 — Generate diagram + save in parallel:**
 
-Run save in background, then immediately generate the HTML diagram:
+Generate diagram: read base CSS template → write `$DIAGRAM_FILE` with body content showing AWS architecture grouped by layer (Interface → Compute → Intelligence → Storage → Observability).
 
+Save in background:
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.py" \
   --slug "<slug>" --url "<url>" --title "<title>" --author "<author>" \
-  --summary "<summary-text>" --key-points '<json-array>' &
+  --summary "$DIAGRAM_LINK" --key-points '[]' &
 ```
-
-Read the base template, then write `$DIAGRAM_FILE` using template CSS + body content showing the AWS architecture grouped by layer (Interface → Compute → Intelligence → Storage → Observability).
 
 Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
@@ -271,69 +245,71 @@ bash "$HOME/.local/share/personal-skills/scripts/slack/check_slack_tokens.sh"
 ```
 Stop if missing.
 
-**S2 — Check history** (skip if `--refresh`):
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/slack/lookup_slack.py" "<url>"
-```
-Exit 0 = cached — show result and stop.
-
-**S3 — Fetch thread:**
+**S2 — Fetch thread:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/slack/fetch_slack_thread.py" "<url>"
 ```
 Exit codes: 0 = success, 1 = auth expired (re-run check_slack_tokens.sh and retry), 2 = fatal error.
 
-**S4 — Summarize** — 3–5 sentence summary + 5–10 key points (decisions, action items, open questions) + participant list with roles.
-
-**S5 — Output to terminal:**
+**S3 — Output summary as tree in terminal:**
 ```
 Slack Summary
 └── #<channel> thread
     ├── Replies      : <count>
     ├── Participants : <names>
     ├── Date         : <date>
-    ├── Fetched      : <date>
     ├── Summary
     │   └── <3-5 sentences>
     ├── Key Points
-    │   ├── • <point>
+    │   ├── • <decisions / action items / open questions>
     │   └── ...
     └── Participants
         ├── <name> — <role/contribution>
         └── ...
 ```
 
-**S6 — Save:**
+**S4 — Save text summary:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py" \
   --thread-id "<id>" --url "<url>" \
   --summary "<summary-text>" --key-points '<json-array>'
 ```
 
-**S7 — Ask for diagram:**
-
-After saving, ask the user:
+**S5 — Ask for diagram:**
 
 > Want a visual diagram for this? (y/n)
 
-If yes: read the base template, write `$DIAGRAM_FILE` with body content showing participant interactions, decision flow, or action item owners. Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
+If yes: read base CSS template → write `$DIAGRAM_FILE` with body content showing participant interactions, decision flow, or action item owners. Then re-save with diagram link:
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py" \
+  --thread-id "<id>" --url "<url>" \
+  --summary "<summary-text>" --key-points '<json-array>' \
+  --diagram-path "$DIAGRAM_LINK"
+```
+
+Tell the user: `Diagram saved — open <DIAGRAM_FILE> in Chrome.`
 
 ---
 
-## HTML diagram body — what to generate
+## HTML diagram body — visual guide
 
-When writing the body content (appended after the base template), pick the right visual per section:
+Pick the right element per section:
 
-| Content type | Visual |
+| Content | Use |
 |---|---|
-| Architecture / service flow | Cards + arrows (use `.card`, `.h-arrow`, `.v-arrow`) |
-| Comparison / migration map | Table (use `.tbl`) |
-| Hierarchy / file tree / org | Tree (use `.tree` with nested `<ul>`) |
-| Sequential steps / phases | Timeline (use `.timeline`, `.tl-item`) |
-| Scores / metrics / rankings | Progress bars (use `.metric`, `.bar-track`, `.bar-fill`) |
+| Architecture / service flow | Cards + arrows (`.card`, `.h-arrow`, `.v-arrow`) |
+| Comparison / spec list | Table (`.tbl`) |
+| Hierarchy / file tree / org | Tree (`.tree` + nested `<ul>`) |
+| Sequential phases / events | Timeline (`.timeline`, `.tl-item`) |
+| Scores / metrics | Progress bars (`.metric`, `.bar-track`, `.bar-fill`) |
 
-Rules:
-- Use color themes to encode meaning: `.orange` = entry/trigger, `.blue` = core logic, `.purple` = AI/LLM, `.red` = storage, `.green` = async/background, `.amber` = queue/buffer, `.teal` = external service
-- Use `.badge` for service labels, `.sub` for internal detail blocks inside a card
-- Use `.footer` + `.mmap` for migration/legend tables at the bottom
-- Body starts with `<h1>` title and ends before `</body></html>`
+Color encoding:
+- `.orange` — entry / trigger
+- `.blue` — core logic / worker
+- `.purple` — AI / LLM
+- `.red` — storage / database
+- `.green` — async / background
+- `.amber` — queue / buffer
+- `.teal` — external service
+
+Body starts with `<h1>` title. End with `</body></html>`.
