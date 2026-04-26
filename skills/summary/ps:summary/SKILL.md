@@ -80,20 +80,7 @@ bash "$HOME/.local/share/personal-skills/scripts/tube/get_transcript.sh" "<url>"
 
 **Y5 — Summarize** — 3–5 sentence summary + 5–10 key points from transcript.
 
-**Y6 — Output:**
-```
-YouTube Summary
-└── <Title>
-    ├── URL     : <url>
-    ├── Fetched : <date>
-    ├── Summary
-    │   └── <3-5 sentences>
-    └── Key Points
-        ├── • <point>
-        └── ...
-```
-
-**Y7 — Save:**
+**Y6 — Save:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
   --video-id "<id>" --url "<url>" \
@@ -101,11 +88,9 @@ python3 "$HOME/.local/share/personal-skills/scripts/tube/save_summary.py" \
   --key-points '<json-array>' --transcript "<excerpt>"
 ```
 
-**Y8 — Diagram** (only if `--diagram` or user explicitly asks):
+**Y7 — Diagram** (always — no terminal output, go straight to HTML):
 
-Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`.
-
-The diagram should visually represent the architecture, flow, or key concepts from the video using color-coded cards and CSS arrows — no external dependencies, no scripts, pure HTML+CSS. Then tell the user:
+Generate a self-contained HTML diagram at `/tmp/summary_diagram.html` that visually represents the architecture, flow, or key concepts from the video. Then tell the user:
 
 > Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
@@ -126,21 +111,7 @@ python3 "$HOME/.local/share/personal-skills/scripts/medium/fetch_medium.py" "<ur
 
 **M3 — Summarize** — 3–5 sentence summary + 5–8 key points.
 
-**M4 — Output:**
-```
-Medium Summary
-└── <Title>
-    ├── Author  : <author>
-    ├── URL     : <url>
-    ├── Fetched : <date>
-    ├── Summary
-    │   └── <3-5 sentences>
-    └── Key Points
-        ├── • <point>
-        └── ...
-```
-
-**M5 — Save:**
+**M4 — Save:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
   --slug "<slug-from-url>" --url "<url>" \
@@ -149,9 +120,9 @@ python3 "$HOME/.local/share/personal-skills/scripts/medium/save_medium.py" \
   --key-points '<json-array-of-points>'
 ```
 
-**M6 — Diagram** (only if `--diagram` or user explicitly asks):
+**M5 — Diagram** (always — no terminal output, go straight to HTML):
 
-Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`. Visualize the article's concepts, architecture, or flow using color-coded cards and CSS arrows. Tell the user:
+Generate a self-contained HTML diagram at `/tmp/summary_diagram.html` that visualizes the article's concepts, architecture, or flow. Then tell the user:
 
 > Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
@@ -206,9 +177,13 @@ python3 "$HOME/.local/share/personal-skills/scripts/jira/save_jira.py" \
   --summary "<summary-text>" --key-points '<json-array>'
 ```
 
-**J8 — Diagram** (only if `--diagram` or user explicitly asks):
+**J8 — Ask for diagram:**
 
-Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`. Show the issue status flow, affected components, or implementation plan using color-coded cards and CSS arrows. Tell the user:
+After saving, ask the user:
+
+> Want a visual diagram for this? (y/n)
+
+If yes: generate a self-contained HTML diagram at `/tmp/summary_diagram.html` showing the issue status flow, affected components, or implementation plan. Tell the user:
 
 > Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
@@ -229,32 +204,16 @@ python3 "$HOME/.local/share/personal-skills/scripts/github/fetch_github_repo.py"
 
 **G3 — Summarize** — 3–5 sentence summary + 6–10 key points (purpose, tech stack, architecture, features, activity, getting started).
 
-**G4 — Output:**
-```
-GitHub Summary
-└── <owner>/<repo>
-    ├── Stars    : <stars>
-    ├── Language : <language>
-    ├── License  : <license>
-    ├── Updated  : <date>
-    ├── Fetched  : <date>
-    ├── Summary
-    │   └── <3-5 sentences>
-    └── Key Points
-        ├── • <point>
-        └── ...
-```
-
-**G5 — Save:**
+**G4 — Save:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/github/save_github_summary.py" \
   --url "<url>" --full-name "<owner>/<repo>" \
   --summary "<summary-text>" --key-points '<json-array>'
 ```
 
-**G6 — Diagram** (only if `--diagram` or user explicitly asks):
+**G5 — Diagram** (always — no terminal output, go straight to HTML):
 
-Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`. Show the repo architecture, component relationships, or data flow using color-coded cards and CSS arrows. Tell the user:
+Generate a self-contained HTML diagram at `/tmp/summary_diagram.html` showing the repo architecture, component relationships, or data flow. Then tell the user:
 
 > Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
@@ -275,27 +234,7 @@ python3 "$HOME/.local/share/personal-skills/scripts/amazon/fetch_amazon_blog.py"
 
 **A3 — Summarize** — Four-paragraph summary (Problem → Solution → Build & Decisions → Outcomes & Lessons) + 5–8 key insights + tech stack list (`ServiceName — purpose`).
 
-**A4 — Output:**
-```
-Amazon/AWS Summary
-└── <Title>
-    ├── Author  : <author>
-    ├── URL     : <url>
-    ├── Fetched : <date>
-    ├── Summary
-    │   ├── Problem  : <paragraph>
-    │   ├── Solution : <paragraph>
-    │   ├── Build    : <paragraph>
-    │   └── Outcomes : <paragraph>
-    ├── Key Points
-    │   ├── • <insight>
-    │   └── ...
-    └── Tech Stack
-        ├── <Service> — <purpose>
-        └── ...
-```
-
-**A5 — Save:**
+**A4 — Save:**
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.py" \
   --slug "<slug>" --url "<url>" \
@@ -303,9 +242,9 @@ python3 "$HOME/.local/share/personal-skills/scripts/amazon/save_amazon_summary.p
   --summary "<summary-text>" --key-points '<json-array>'
 ```
 
-**A6 — Diagram** (only if `--diagram` or user explicitly asks):
+**A5 — Diagram** (always — no terminal output, go straight to HTML):
 
-Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`. Show the AWS architecture grouped by layer (Interface → Compute → Intelligence → Storage → Observability) using color-coded cards and CSS arrows. Tell the user:
+Generate a self-contained HTML diagram at `/tmp/summary_diagram.html` showing the AWS architecture grouped by layer (Interface → Compute → Intelligence → Storage → Observability). Then tell the user:
 
 > Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
@@ -358,9 +297,13 @@ python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py"
   --summary "<summary-text>" --key-points '<json-array>'
 ```
 
-**S7 — Diagram** (only if `--diagram` or user explicitly asks):
+**S7 — Ask for diagram:**
 
-Generate a self-contained HTML diagram file at `/tmp/summary_diagram.html`. Show participant interactions, decision flow, or action item owners using color-coded cards and CSS arrows. Tell the user:
+After saving, ask the user:
+
+> Want a visual diagram for this? (y/n)
+
+If yes: generate a self-contained HTML diagram at `/tmp/summary_diagram.html` showing participant interactions, decision flow, or action item owners. Tell the user:
 
 > Diagram saved — open `/tmp/summary_diagram.html` in Chrome.
 
