@@ -6,7 +6,8 @@ Reads credentials from env: JIRA_EMAIL, JIRA_API_TOKEN, JIRA_URL
 Usage: fetch_jira.py <PROJ-123 | jira-issue-url>
 
 Output: JSON { key, url, summary, type, status, priority, reporter,
-               assignee, created, updated, description, comments[] }
+               assignee, created, updated, description, comments[],
+               attachments[{id, filename, mime_type, content_url}] }
 Exit 0 = success, Exit 1 = config error, Exit 2 = API error
 """
 
@@ -82,6 +83,13 @@ def extract_text(node) -> str:
         return "\n".join("> " + l for l in inner.splitlines()) + "\n"
     if t == "rule":         return "\n---\n"
     if t == "mention":      return "@" + node.get("attrs", {}).get("text", "someone")
+    if t in ("mediaSingle", "mediaInline"):
+        alt = ""
+        for child in ch:
+            if isinstance(child, dict) and child.get("type") == "media":
+                alt = child.get("attrs", {}).get("alt", "")
+                break
+        return f"\n[image{': ' + alt if alt else ''}]\n"
     if ch:                  return "".join(extract_text(c) for c in ch)
     return ""
 
@@ -99,7 +107,7 @@ def main():
     auth, base_url = get_credentials()
     key = extract_key(sys.argv[1])
 
-    fields = "summary,description,comment,status,assignee,reporter,created,updated,priority,issuetype"
+    fields = "summary,description,comment,status,assignee,reporter,created,updated,priority,issuetype,attachment"
     data = jira_get(f"/rest/api/3/issue/{key}?fields={fields}", base_url, auth)
     f = data.get("fields", {})
 
@@ -121,6 +129,17 @@ def main():
         for c in comments_raw
     ]
 
+    attachments = [
+        {
+            "id":          a.get("id", ""),
+            "filename":    a.get("filename", ""),
+            "mime_type":   a.get("mimeType", ""),
+            "content_url": a.get("content", ""),
+        }
+        for a in f.get("attachment") or []
+        if a.get("mimeType", "").startswith("image/")
+    ]
+
     print(json.dumps({
         "key":         data.get("key"),
         "url":         f"{base_url}/browse/{data.get('key')}",
@@ -134,6 +153,7 @@ def main():
         "updated":     f.get("updated", ""),
         "description": extract_text(f.get("description")).strip() if f.get("description") else "",
         "comments":    comments,
+        "attachments": attachments,
     }, ensure_ascii=False))
 
 

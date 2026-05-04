@@ -42,15 +42,27 @@ python3 "$HOME/.local/share/personal-skills/scripts/jira/lookup_jira.py" "<KEY_O
 python3 "$HOME/.local/share/personal-skills/scripts/jira/fetch_jira.py" "<KEY_OR_URL>"
 ```
 
-Outputs JSON: `key`, `url`, `summary`, `type`, `status`, `priority`, `reporter`, `assignee`, `created`, `updated`, `description`, `comments[]`.
+Outputs JSON: `key`, `url`, `summary`, `type`, `status`, `priority`, `reporter`, `assignee`, `created`, `updated`, `description`, `comments[]`, `attachments[]`.
+
+## Step 3.5 — Analyze image attachments (skip if no images)
+
+If `attachments` is non-empty, run:
+
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/jira/analyze_jira_images.py" '<ATTACHMENTS_JSON>'
+```
+
+- Requires `GEMINI_API_KEY` env var. If unset, the script exits silently with `[]` — skip without warning.
+- Outputs JSON array of `{filename, description}`. Carry these descriptions into Step 4 as **image context**.
 
 ## Step 4 — Summarize
 
-Using `description` + all `comments`:
+Using `description` + all `comments` + image descriptions from Step 3.5 (if any):
 
 1. **Summary** — 3–5 sentences: what the issue is, current status, what's needed.
 2. **Key Points** — 5–10 bullets: problem, decisions, blockers, next steps.
 3. **Comment Highlights** — if >3 comments, call out 2–3 most significant ones.
+4. **Images** — if image descriptions were returned in Step 3.5, list each as `filename: <description>`.
 
 ## Step 5 — Output immediately
 
@@ -66,6 +78,9 @@ Using `description` + all `comments`:
 
 ### Comment Highlights
 ...
+
+### Images  ← only if image descriptions exist
+- filename.png: <description>
 ```
 
 Then on a new line: *"Browse history with `/ps:web`. Want a diagram for this? (y/n)"*
