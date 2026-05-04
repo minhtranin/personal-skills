@@ -34,11 +34,10 @@ skills/<namespace>/
 
 | Namespace | Commands | Status |
 |---|---|---|
-| `tube` | `/ps-tube-summary`, `/ps-web` | Active |
-| `medium` | `/ps-medium-summary` | Active |
-| `jira` | `/ps-jira-summary`, `/ps-jira-plantask` | Active |
-| `slack` | `/ps-slack-login`, `/ps-slack-summary` | Active |
-| `github` | `/ps:github-summary` | Active |
+| `summary` | `/ps:summary` | Active |
+| `tube` | `/ps-web` | Active |
+| `jira` | `/ps-jira-plantask` | Active |
+| `slack` | `/ps-slack-login`, `/ps-slack-answer`, `/ps-slack-post` | Active |
 | `frontend` | `/ps:frontend-ui` | Active |
 
 ## Adding a new skill namespace
@@ -50,6 +49,11 @@ skills/<namespace>/
 5. `install.sh` picks it up automatically — no edits needed
 
 ## Scripts reference
+
+### `summary` namespace
+| Script | Purpose |
+|---|---|
+| `detect_type.py <input>` | Detects content type: `youtube` / `medium` / `jira` / `github` / `amazon` / `slack` / `unknown` |
 
 ### `tube` namespace
 | Script | Purpose |
@@ -68,6 +72,23 @@ skills/<namespace>/
 | `analyze_jira_images.py <attachments_json>` | Downloads image attachments and describes them via Gemini Vision (`GEMINI_API_KEY`); returns `[]` silently if key is unset |
 | `lookup_jira.py <key>` | History cache lookup for Jira issues |
 | `save_jira_summary.py` | Saves entry to `~/.jira-summary/` |
+
+### `excalidraw` namespace
+| Script | Purpose |
+|---|---|
+| `check_deps.sh` | Checks uv + playwright, installs if missing |
+| `references/render_excalidraw.py` | Renders `.excalidraw` JSON to PNG via Playwright |
+| `references/render_template.html` | HTML template used by the renderer |
+| `references/color-palette.md` | Brand colors and semantic color mapping |
+| `references/element-templates.md` | Copy-paste JSON templates for Excalidraw elements |
+| `references/pyproject.toml` | uv project config for playwright dependency |
+
+### `amazon` namespace
+| Script | Purpose |
+|---|---|
+| `fetch_amazon_blog.py <url>` | Fetches AWS/Amazon blog post HTML, outputs JSON with title, author, category, text |
+| `lookup_amazon.py <url>` | History cache lookup for Amazon blog posts |
+| `save_amazon_summary.py` | Saves entry to `~/.amazon-summary/` |
 
 ### `slack` namespace
 | Script | Purpose |

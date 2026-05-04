@@ -25,10 +25,10 @@ check_python() {
 
 check_python_libs() {
   for lib in flask; do
-    if python3 -c "import $lib" &>/dev/null 2>&1; then
+    if uv run --with "$lib" python3 -c "import $lib" &>/dev/null 2>&1; then
       echo "[ok] python lib '$lib' found"
     else
-      MISSING+=("pip:$lib")
+      MISSING+=("uv:$lib")
       echo "[missing] python lib '$lib'"
     fi
   done
@@ -52,23 +52,16 @@ if [[ "$answer" =~ ^[Yy]$ ]]; then
   for item in "${MISSING[@]}"; do
     if [ "$item" = "yt-dlp" ]; then
       echo "Installing yt-dlp..."
-      if command -v pip3 &>/dev/null; then
-        pip3 install yt-dlp
-      elif command -v pip &>/dev/null; then
-        pip install yt-dlp
-      else
-        echo "ERROR: pip not found. Install pip first, then run: pip install yt-dlp"
-        exit 1
-      fi
+      uv tool install yt-dlp
     elif [ "$item" = "python3" ]; then
       echo "ERROR: python3 must be installed manually."
-      echo "  Ubuntu/Debian: sudo apt install python3 python3-pip"
+      echo "  Ubuntu/Debian: sudo apt install python3"
       echo "  macOS:         brew install python3"
       exit 1
-    elif [[ "$item" == pip:* ]]; then
-      lib="${item#pip:}"
+    elif [[ "$item" == uv:* ]]; then
+      lib="${item#uv:}"
       echo "Installing python lib '$lib'..."
-      pip3 install "$lib"
+      uv pip install "$lib"
     fi
   done
   echo ""

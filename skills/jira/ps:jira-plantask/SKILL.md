@@ -121,10 +121,11 @@ QUICK TEST AREAS (end-to-end)
 
 **Task design rules:**
 - Each task must be independently implementable (no circular dependencies between tasks)
+- **No file overlap** — each file must be owned by exactly one task to avoid merge conflicts
 - Tasks should be ordered so earlier tasks don't block later ones
 - Prefer small, focused tasks (1–3 files each) over large catch-all tasks
 - Follow the conventions and patterns found in Step 3 exactly — no new abstractions unless required
-- Include a test/verify step in every task description
+- Include Acceptance Criteria and Where to Test in every task description
 
 ---
 
@@ -167,6 +168,9 @@ Use this Python script pattern to create each subtask:
 python3 << 'PYEOF'
 import json, os, sys, urllib.request, base64
 
+sys.path.insert(0, os.path.expanduser('~/.local/share/personal-skills/scripts/jira'))
+from jira_adf import text_to_adf
+
 email = os.environ.get('JIRA_EMAIL')
 token = os.environ.get('JIRA_API_TOKEN')
 url   = os.environ.get('JIRA_URL', '').rstrip('/')
@@ -180,19 +184,6 @@ description = 'DESCRIPTION_TEXT'
 
 project  = parent_key.split('-')[0]
 auth     = base64.b64encode(f'{email}:{token}'.encode()).decode()
-
-# Build ADF paragraphs from the description text
-def text_to_adf(text):
-    paragraphs = []
-    for para in text.strip().split('\n\n'):
-        lines = para.strip()
-        if not lines:
-            continue
-        paragraphs.append({
-            'type': 'paragraph',
-            'content': [{'type': 'text', 'text': lines}]
-        })
-    return {'type': 'doc', 'version': 1, 'content': paragraphs or [{'type': 'paragraph', 'content': [{'type': 'text', 'text': text}]}]}
 
 payload = json.dumps({
     'fields': {
@@ -226,28 +217,31 @@ PYEOF
 For each subtask, build the description from the task plan using this template:
 
 ```
-## Background
-<Copy the parent issue's requirement context — 2–4 sentences>
+## Goal
+<2–3 sentences connecting this subtask to the parent issue's context and why it matters>
 
-## Scope
-<What this specific subtask covers>
+## Changes
+
+| Area | Change | Impact |
+|------|--------|--------|
+| **<Area 1>** | <what to change> | <expected result> |
+| **<Area 2>** | <what to change> | <expected result> |
 
 ## Acceptance Criteria
 - <criterion 1>
 - <criterion 2>
 
 ## Where to Test
-- <URL, component, or user action to verify>
-- <expected result>
-
-## Approach
-<How to implement, following existing patterns — no file paths>
+- <action> → <expected result>
+- <action> → <expected result>
 ```
 
 **Description rules:**
 - No file paths or line numbers (they change; use the component/hook name instead)
-- Focus on requirements and expected behaviour, not implementation steps
-- "Where to Test" must be concrete — a page URL, a user action, an API endpoint
+- Use the **Changes table** to summarize scope — one row per logical area, bold the Area column
+- Goal section: brief context from parent — don't repeat the full parent description
+- Acceptance Criteria must be concrete and testable
+- Where to Test: concrete actions with expected results (page URL, user action, API endpoint)
 
 ---
 
@@ -255,11 +249,12 @@ For each subtask, build the description from the task plan using this template:
 
 Ask:
 1. Subtask title/summary (required)
-2. Acceptance Criteria (optional — Enter to skip)
-3. Where to Test / Quick Test Areas (optional)
-4. Expected Behavior (optional)
+2. Goal — brief context (optional — will auto-fill from parent if skipped)
+3. Changes — enter each as `Area | Change | Impact` (optional — one per line, empty to skip)
+4. Acceptance Criteria (optional — Enter to skip)
+5. Where to Test (optional — Enter to skip)
 
-Show a confirmation summary, then on `y` create via the same Python script as Step 6.
+Build the description using the same template as Step 6 (Goal + Changes table + AC + Where to Test). Show a confirmation summary, then on `y` create via the same Python script as Step 6.
 
 ---
 
@@ -298,11 +293,14 @@ print(json.dumps(data['fields'].get('description', {}), indent=2))
 PYEOF
 ```
 
-Ask what to change, draft the new description, show it for confirmation, then update on `y`:
+Ask what to change, draft the new description using the same template format (Goal + Changes table + AC + Where to Test), show it for confirmation, then update on `y`:
 
 ```python
 python3 << 'PYEOF'
-import json, os, urllib.request, base64
+import json, os, sys, urllib.request, base64
+
+sys.path.insert(0, os.path.expanduser('~/.local/share/personal-skills/scripts/jira'))
+from jira_adf import text_to_adf
 
 email = os.environ.get('JIRA_EMAIL')
 token = os.environ.get('JIRA_API_TOKEN')
@@ -310,13 +308,6 @@ url   = os.environ.get('JIRA_URL', '').rstrip('/')
 auth  = base64.b64encode(f'{email}:{token}'.encode()).decode()
 
 new_description = 'NEW DESCRIPTION TEXT'
-
-def text_to_adf(text):
-    paragraphs = []
-    for para in text.strip().split('\n\n'):
-        if para.strip():
-            paragraphs.append({'type': 'paragraph', 'content': [{'type': 'text', 'text': para.strip()}]})
-    return {'type': 'doc', 'version': 1, 'content': paragraphs or [{'type': 'paragraph', 'content': [{'type': 'text', 'text': text}]}]}
 
 payload = json.dumps({'fields': {'description': text_to_adf(new_description)}}).encode()
 

@@ -3,7 +3,7 @@
 set -e
 
 echo "→ Installing python-telegram-bot and anthropic SDK..."
-pip3 install --quiet "python-telegram-bot>=20.0" anthropic
+uv pip install "python-telegram-bot>=20.0" anthropic
 
 echo "✓ Dependencies installed."
 echo ""

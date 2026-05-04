@@ -25,7 +25,7 @@ VERSION_FILE="$SCRIPTS_INSTALL_DIR/.version"
 
 # Agent commands directories
 CLAUDE_DIR="$HOME/.claude/skills"                          # folder-per-skill structure
-ANTIGRAVITY_DIR="$HOME/.gemini/antigravity/global_skills"  # folder-per-skill structure
+ANTIGRAVITY_DIR="$HOME/.gemini/antigravity/skills"          # folder-per-skill structure
 OPENCODE_DIR="$HOME/.opencode/commands"
 
 # ── Parse args ───────────────────────────────────────────────────────────────
@@ -139,6 +139,20 @@ if [ "$MODE" = "remote" ]; then
   fi
 fi
 
+# ── 0. Clean up retired commands ─────────────────────────────────────────────
+
+# Commands replaced by ps:summary in JUNVO-08
+RETIRED_COMMANDS="ps:tube-summary ps:medium-summary ps:jira-summary ps:github-summary ps:amazon-summary ps:slack-summary ps:excalidraw"
+
+for cmd in $RETIRED_COMMANDS; do
+  # Flat .md style (Claude Code, OpenCode)
+  for dir in "$CLAUDE_DIR" "$OPENCODE_DIR"; do
+    [ -f "$dir/$cmd.md" ] && rm -f "$dir/$cmd.md" && echo "  ✗ removed $dir/$cmd.md"
+  done
+  # Folder-per-skill style (Antigravity)
+  [ -d "$ANTIGRAVITY_DIR/$cmd" ] && rm -rf "$ANTIGRAVITY_DIR/$cmd" && echo "  ✗ removed $ANTIGRAVITY_DIR/$cmd"
+done
+
 # ── 1. Install scripts ───────────────────────────────────────────────────────
 
 echo "→ Installing helper scripts..."
@@ -210,22 +224,15 @@ echo ""
 echo "Done! Installed: $(current_version)"
 echo ""
 echo "Commands:"
-echo "  /ps:tube-summary <youtube-url>   — summarize a YouTube video"
-echo "  /ps:medium-summary <medium-url>  — summarize a Medium article"
-echo "  /ps:jira-summary <PROJ-123>      — summarize a Jira issue"
+echo "  /ps:summary <url-or-issue-key>   — summarize YouTube / Medium / Jira / GitHub / AWS / Slack (auto-detect)"
 echo "  /ps:jira-plantask <PROJ-123>     — plan + break + create subtasks from a Jira issue"
-echo "  /ps:slack-summary <thread-url>   — summarize a Slack thread"
 echo "  /ps:slack-answer <thread-url>    — research codebase and draft a reply to a Slack thread"
-echo "  /ps:excalidraw <description>     — generate a diagram/chart (needs: pip3 install playwright)"
 echo "  /ps:web                          — browse all history in browser"
 echo "  /ps:bot-telegram                 — Telegram bot: chat with Claude Code from your phone"
 echo ""
-echo "Manage:"
-echo "  # Check for updates"
-echo "  curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPO/main/install.sh | bash -s -- --version-check"
-echo ""
-echo "  # Update to latest"
-echo "  curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPO/main/install.sh | bash -s -- --update"
-echo ""
-echo "  # Install specific version"
-echo "  curl -fsSL https://raw.githubusercontent.com/$GITHUB_REPO/main/install.sh | bash -s -- --version v1.2.0"
+if [ "$MODE" = "remote" ]; then
+  echo "What's new in $TARGET_VERSION:"
+  curl -fsSL "$GITHUB_API/releases/latest" 2>/dev/null \
+    | python3 -c "import sys,json; r=json.load(sys.stdin); print(r.get('body',''))" \
+    | head -20
+fi

@@ -29,6 +29,20 @@ def main():
         sys.exit(1)
 
     os.makedirs(CACHE_DIR, exist_ok=True)
+
+    # Copy diagram to persistent location so web server can serve it later
+    import shutil
+    from pathlib import Path
+    diagram_png = args.diagram_png
+    if diagram_png:
+        src = Path(diagram_png)
+        if src.exists():
+            diagrams_dir = Path(CACHE_DIR) / "diagrams"
+            diagrams_dir.mkdir(parents=True, exist_ok=True)
+            dest = diagrams_dir / f"{s}.png"
+            shutil.copy2(src, dest)
+            diagram_png = str(dest)
+
     data = {
         "url": args.url,
         "full_name": args.full_name,
@@ -38,7 +52,7 @@ def main():
         "stars": args.stars,
         "language": args.language,
         "topics": args.topics,
-        "diagram_png": args.diagram_png,
+        "diagram_png": diagram_png,
         "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
     }
     path = os.path.join(CACHE_DIR, f"{s}.json")
