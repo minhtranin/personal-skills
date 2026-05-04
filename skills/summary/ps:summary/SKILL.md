@@ -152,6 +152,14 @@ Stop if missing.
 python3 "$HOME/.local/share/personal-skills/scripts/jira/fetch_jira.py" "<issue-key>"
 ```
 
+**J3.5 — Analyze image attachments (if any):**
+
+If `fetch_jira.py` returned an `attachments` field with image files, run:
+```bash
+python3 "$HOME/.local/share/personal-skills/scripts/jira/analyze_jira_images.py" '<attachments-json>'
+```
+Returns `[{filename, description}]`. Silently returns `[]` if `GEMINI_API_KEY` is not set or no attachments. Include results as an **Images** section in the summary output.
+
 **J4 — Output summary as tree in terminal:**
 ```
 Jira Summary

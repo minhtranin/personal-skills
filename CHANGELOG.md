@@ -7,6 +7,16 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [VOXUANTHUAN-m11] - 2026-05-04
+
+### Added
+- `ps:summary` [jira]: image attachment analysis via Gemini Vision API
+  - `fetch_jira.py` now fetches `attachment` field and returns `attachments[]` (image files only)
+  - New `analyze_jira_images.py` — downloads each image attachment using Jira auth, sends to `gemini-2.0-flash`, returns `{filename, description}[]`
+  - Jira handler adds **J3.5** step to run image analysis when attachments are present; results included in summary as **Images** section
+  - Gracefully skipped when `GEMINI_API_KEY` is not set
+- `fetch_jira.py`: `extract_text` now renders `mediaSingle`/`mediaInline` ADF nodes as `[image: alt]` placeholder instead of silently dropping them
+
 ## [VOXUANTHUAN-m10] - 2026-04-26
 
 ### Removed

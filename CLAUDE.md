@@ -68,7 +68,8 @@ skills/<namespace>/
 | Script | Purpose |
 |---|---|
 | `check_jira_credentials.sh` | Validates `JIRA_EMAIL`, `JIRA_API_TOKEN`, `JIRA_URL` env vars |
-| `fetch_jira.py <key>` | Fetches issue + all comments via Jira REST API v3 |
+| `fetch_jira.py <key>` | Fetches issue + all comments + image attachments via Jira REST API v3 |
+| `analyze_jira_images.py <attachments_json>` | Downloads image attachments and describes them via Gemini Vision (`GEMINI_API_KEY`); returns `[]` silently if key is unset |
 | `lookup_jira.py <key>` | History cache lookup for Jira issues |
 | `save_jira_summary.py` | Saves entry to `~/.jira-summary/` |
 
