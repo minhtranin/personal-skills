@@ -7,6 +7,16 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [VOXUANTHUAN-m12] - 2026-05-12
+
+### Added
+- `install.sh` — Codex support: install skills to `~/.codex/skills/` (folder-per-skill, same structure as Claude Code and Antigravity)
+- `install.sh` — retired command cleanup now covers Codex dir alongside Claude Code and Antigravity
+
+### Changed
+- `ps:pr-create` — dropped Impact column from PR description table (Area + Fix only)
+- `ps:pr-create` — Fix column now uses plain language clear to both devs and PMs, no filenames or function names
+
 ## [VOXUANTHUAN-m11] - 2026-05-04
 
 ### Added

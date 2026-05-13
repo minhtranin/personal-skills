@@ -65,19 +65,20 @@ Example: `FEAT: GRAP-18762 Improve UI and fix data issues in Other loans/Debt ob
 
 https://grapplefinance.atlassian.net/browse/<JIRA-TICKET>    ← omit if no ticket
 
-| Area | Fix | Impact |
-|------|-----|--------|
-| **<Area 1>** | <what was fixed> | <result/impact> |
-| **<Area 2>** | <what was fixed> | <result/impact> |
-| **<Area 3>** | <what was fixed> | <result/impact> |
+| Area | Fix |
+|------|-----|
+| **<Area 1>** | <plain description of what was fixed — no filenames, no technical terms> |
+| **<Area 2>** | <plain description of what was fixed — no filenames, no technical terms> |
+| **<Area 3>** | <plain description of what was fixed — no filenames, no technical terms> |
 ```
 
 Rules:
-- Use a **table** with 3 columns: Area, Fix, Impact
+- Use a **table** with 2 columns: Area, Fix
+- Fix column: describe what changed and why it matters — clear enough for a PM, specific enough for a developer. No filenames, no function names
 - Group related commits into one table row, don't list every commit separately
 - Aim for 3–5 rows total regardless of how many commits there are
 - Bold the Area column for readability
-- Keep Fix and Impact short — one line max each
+- Keep Fix short — one line max
 - Do NOT add any co-author or "Generated with" lines
 
 ---

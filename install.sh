@@ -26,6 +26,7 @@ VERSION_FILE="$SCRIPTS_INSTALL_DIR/.version"
 # Agent commands directories
 CLAUDE_DIR="$HOME/.claude/skills"                          # folder-per-skill structure
 ANTIGRAVITY_DIR="$HOME/.gemini/antigravity/skills"          # folder-per-skill structure
+CODEX_DIR="$HOME/.codex/skills"                            # folder-per-skill structure
 OPENCODE_DIR="$HOME/.opencode/commands"
 
 # ── Parse args ───────────────────────────────────────────────────────────────
@@ -145,12 +146,12 @@ fi
 RETIRED_COMMANDS="ps:tube-summary ps:medium-summary ps:jira-summary ps:github-summary ps:amazon-summary ps:slack-summary ps:excalidraw"
 
 for cmd in $RETIRED_COMMANDS; do
-  # Flat .md style (Claude Code, OpenCode)
-  for dir in "$CLAUDE_DIR" "$OPENCODE_DIR"; do
-    [ -f "$dir/$cmd.md" ] && rm -f "$dir/$cmd.md" && echo "  ✗ removed $dir/$cmd.md"
+  # Flat .md style (OpenCode)
+  [ -f "$OPENCODE_DIR/$cmd.md" ] && rm -f "$OPENCODE_DIR/$cmd.md" && echo "  ✗ removed $OPENCODE_DIR/$cmd.md"
+  # Folder-per-skill style (Claude Code, Antigravity, Codex)
+  for dir in "$CLAUDE_DIR" "$ANTIGRAVITY_DIR" "$CODEX_DIR"; do
+    [ -d "$dir/$cmd" ] && rm -rf "$dir/$cmd" && echo "  ✗ removed $dir/$cmd"
   done
-  # Folder-per-skill style (Antigravity)
-  [ -d "$ANTIGRAVITY_DIR/$cmd" ] && rm -rf "$ANTIGRAVITY_DIR/$cmd" && echo "  ✗ removed $ANTIGRAVITY_DIR/$cmd"
 done
 
 # ── 1. Install scripts ───────────────────────────────────────────────────────
@@ -208,6 +209,7 @@ install_skills_folder() {
 
 install_skills_folder "Claude Code"  "$CLAUDE_DIR"
 install_skills_folder "Antigravity"  "$ANTIGRAVITY_DIR"
+install_skills_folder "Codex"        "$CODEX_DIR"
 install_skills_flat   "OpenCode"     "$OPENCODE_DIR"
 
 # ── 3. Save installed version ────────────────────────────────────────────────
