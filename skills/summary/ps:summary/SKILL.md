@@ -152,6 +152,13 @@ Stop if missing.
 python3 "$HOME/.local/share/personal-skills/scripts/jira/fetch_jira.py" "<issue-key>"
 ```
 
+**J3.1 — Interpret strikethrough text:**
+
+In the fetched `description` and `comments`, any text wrapped in `~~...~~` is **strikethrough** in Jira. Treat it as **removed / superseded / no longer required** — QC or the reporter struck it out instead of hard-deleting it. Rules:
+- Do **not** list struck-through text as an active requirement, scope item, or key point.
+- When struck text sits next to its replacement (a before→after edit), report only the current (non-struck) version, and note the change if it's material — e.g. "Requirement changed: was X, now Y."
+- If a whole requirement/section is struck with no replacement, either omit it or mention it once as "Removed: …" so the reader knows it was dropped — never as something still to be done.
+
 **J3.5 — Analyze image attachments (if any):**
 
 If `fetch_jira.py` returned an `attachments` field with image files, run:
