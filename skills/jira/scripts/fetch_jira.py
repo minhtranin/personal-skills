@@ -66,7 +66,12 @@ def extract_text(node) -> str:
     ch = node.get("content", [])
     if t == "doc":          return "".join(extract_text(c) for c in ch)
     if t == "paragraph":    return "".join(extract_text(c) for c in ch) + "\n"
-    if t == "text":         return node.get("text", "")
+    if t == "text":
+        txt = node.get("text", "")
+        # Preserve strikethrough so the summarizer knows it's removed/ignored, not active.
+        if any(m.get("type") == "strike" for m in node.get("marks", [])):
+            return f"~~{txt}~~" if txt.strip() else txt
+        return txt
     if t == "hardBreak":    return "\n"
     if t == "bulletList":   return "".join(extract_text(c) for c in ch)
     if t == "orderedList":  return "".join(extract_text(c) for c in ch)
