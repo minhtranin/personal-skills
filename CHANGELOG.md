@@ -7,6 +7,12 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [VOXUANTHUAN-m13] - 2026-07-02
+
+### Changed
+- `ps:summary` [jira]: replace Gemini Vision with model-side image inspection — no `GEMINI_API_KEY` required
+- `ps:summary` [jira]: strikethrough text (`~~text~~`) treated as removed/ignored in summaries
+
 ## [VOXUANTHUAN-m12] - 2026-05-12
 
 ### Added
