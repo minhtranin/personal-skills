@@ -7,6 +7,18 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [VOXUANTHUAN-m14] - 2026-07-02
+
+### Removed
+- `ps:web` — local web history browser skill deleted
+- `ps:slack-post` — post-to-channel skill deleted
+- All history-saving steps removed from `ps:summary` and `ps:slack-answer` (no more `save_*.py` calls)
+- All diagram generation steps removed from `ps:summary` (no HTML output, no `diagram_header.html`)
+- `ps:slack-answer`: `--refresh` flag and history-check step removed
+
+### Changed
+- `ps:summary`: each content type now outputs a plain text tree summary in terminal
+
 ## [VOXUANTHUAN-m13] - 2026-07-02
 
 ### Changed
