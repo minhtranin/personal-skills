@@ -1,7 +1,7 @@
 ---
 name: ps:slack-answer
 description: Fetch a Slack thread, research the current directory codebase to find the best answer, draft a reply, then ask the user to confirm before posting. Use when the user runs /ps:slack-answer <thread-url> or asks to answer/reply to a Slack thread.
-argument-hint: <slack-thread-url> [--refresh]
+argument-hint: <slack-thread-url>
 allowed-tools: [Bash, Read, Write, Agent]
 ---
 
@@ -9,7 +9,7 @@ allowed-tools: [Bash, Read, Write, Agent]
 
 **Arguments:** $ARGUMENTS
 
-Parse the Slack thread URL. If `--refresh` is present, skip history check.
+Parse the Slack thread URL.
 
 ---
 
@@ -33,18 +33,7 @@ bash "$HOME/.local/share/personal-skills/scripts/slack/check_slack_tokens.sh"
 
 ---
 
-## Step 2 — Check history (skip if --refresh)
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/slack/lookup_slack.py" "<URL>"
-```
-
-- **Exit 0 (found):** show cached channel, summary, key points. Ask: *"Already summarized on <date>. Use cached context? Pass --refresh to re-fetch."* Use cached if user confirms, else re-fetch.
-- **Exit 1:** continue to Step 3.
-
----
-
-## Step 3 — Fetch thread
+## Step 2 — Fetch thread
 
 ```bash
 python3 "$HOME/.local/share/personal-skills/scripts/slack/fetch_slack_thread.py" "<URL>"
@@ -57,7 +46,7 @@ Outputs JSON: `channel_name`, `thread_ts`, `parent` (author, text), `replies[]` 
 
 ---
 
-## Step 4 — Summarize the thread context
+## Step 3 — Summarize the thread context
 
 From the fetched thread, extract:
 
@@ -83,7 +72,7 @@ Output this context block immediately:
 
 ---
 
-## Step 5 — Research the codebase
+## Step 4 — Research the codebase
 
 Use the **Explore** agent to deeply research the current working directory to find the most relevant answer to the open question. Provide the full thread context (core question + details) as the research goal.
 
@@ -102,9 +91,9 @@ If the current directory has no relevant code (e.g. it's a config-only or empty 
 
 ---
 
-## Step 6 — Draft the reply
+## Step 5 — Draft the reply
 
-Using the research findings from Step 5, draft a Slack reply message that:
+Using the research findings from Step 4, draft a Slack reply message that:
 
 - **Directly answers** the open question in 2–5 sentences
 - **References specific code** if found (file name, function name, or key concept — not full paths)
@@ -129,7 +118,7 @@ Then ask: **"Post this reply to the thread? (y/n/e=edit)"**
 
 ---
 
-## Step 7 — Handle user response
+## Step 6 — Handle user response
 
 ### If `n` — do nothing
 Tell the user the reply was not posted. Offer: *"Copy the draft above to paste manually."*
@@ -150,21 +139,3 @@ python3 "$HOME/.local/share/personal-skills/scripts/slack/post_slack_reply.py" \
 - **Exit 0:** show `✓ Reply posted to #<channel>.`
 - **Exit 1 (auth error):** tell the user tokens expired, re-extract with F12.
 - **Exit 2:** show error message and stop.
-
----
-
-## Step 8 — Save to history (always, regardless of whether reply was posted)
-
-```bash
-python3 "$HOME/.local/share/personal-skills/scripts/slack/save_slack_summary.py" \
-  --thread-id "<CHANNEL_ID>_<THREAD_TS>" \
-  --url "<URL>" \
-  --channel "<CHANNEL_NAME>" \
-  --parent-text "<PARENT_MESSAGE_FIRST_200_CHARS>" \
-  --summary "<THREAD_SUMMARY>" \
-  --key-points "<KEY_POINTS_AND_DRAFT_REPLY>" \
-  --participants "<COMMA_SEPARATED_NAMES>" \
-  --reply-count "<COUNT>"
-```
-
-Then: *"Browse all history with `/ps:web`."*

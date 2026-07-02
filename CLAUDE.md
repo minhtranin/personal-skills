@@ -35,9 +35,8 @@ skills/<namespace>/
 | Namespace | Commands | Status |
 |---|---|---|
 | `summary` | `/ps:summary` | Active |
-| `tube` | `/ps-web` | Active |
 | `jira` | `/ps-jira-plantask` | Active |
-| `slack` | `/ps-slack-login`, `/ps-slack-answer`, `/ps-slack-post` | Active |
+| `slack` | `/ps-slack-login`, `/ps-slack-answer` | Active |
 | `frontend` | `/ps:frontend-ui` | Active |
 
 ## Adding a new skill namespace
@@ -58,11 +57,8 @@ skills/<namespace>/
 ### `tube` namespace
 | Script | Purpose |
 |---|---|
-| `check_deps.sh` | Checks yt-dlp, python3, flask — prompts to install if missing |
+| `check_deps.sh` | Checks yt-dlp, python3 — prompts to install if missing |
 | `get_transcript.sh <url>` | Downloads VTT via yt-dlp, outputs clean plain text |
-| `lookup_history.py <url>` | Exit 0 + JSON if cached, exit 1 if not found |
-| `save_summary.py` | Saves entry to `~/.youtube-summary/` |
-| `web_server.py` | Flask server for browsing all history (YouTube/Medium/Jira/Slack) |
 
 ### `jira` namespace
 | Script | Purpose |
@@ -97,5 +93,4 @@ skills/<namespace>/
 | `get_slack_tokens.py` | Scans Slack desktop LevelDB storage to auto-extract xoxc/xoxd tokens |
 | `save_slack_tokens.py` | Validates + saves xoxc/xoxd to `~/.local/share/personal-skills/slack-tokens.json` |
 | `fetch_slack_thread.py <url>` | Fetches thread + replies via `conversations.replies` API |
-| `lookup_slack.py <url>` | History cache lookup for Slack threads |
-| `save_slack_summary.py` | Saves entry to `~/.slack-summary/` |
+| `post_slack_reply.py` | Posts reply to a Slack thread |
