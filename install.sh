@@ -154,6 +154,11 @@ for cmd in $RETIRED_COMMANDS; do
   done
 done
 
+# Helper replaced by model-side Jira image inspection.
+[ -f "$SCRIPTS_INSTALL_DIR/scripts/jira/analyze_jira_images.py" ] && \
+  rm -f "$SCRIPTS_INSTALL_DIR/scripts/jira/analyze_jira_images.py" && \
+  echo "  ✗ removed retired Jira image analyzer"
+
 # ── 1. Install scripts ───────────────────────────────────────────────────────
 
 echo "→ Installing helper scripts..."

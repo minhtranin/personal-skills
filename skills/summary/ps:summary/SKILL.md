@@ -159,13 +159,16 @@ In the fetched `description` and `comments`, any text wrapped in `~~...~~` is **
 - When struck text sits next to its replacement (a before→after edit), report only the current (non-struck) version, and note the change if it's material — e.g. "Requirement changed: was X, now Y."
 - If a whole requirement/section is struck with no replacement, either omit it or mention it once as "Removed: …" so the reader knows it was dropped — never as something still to be done.
 
-**J3.5 — Analyze image attachments (if any):**
+**J3.5 — Inspect image attachments (if any):**
 
-If `fetch_jira.py` returned an `attachments` field with image files, run:
+If `fetch_jira.py` returned an `attachments` field with image files, download them locally:
 ```bash
-python3 "$HOME/.local/share/personal-skills/scripts/jira/analyze_jira_images.py" '<attachments-json>'
+python3 "$HOME/.local/share/personal-skills/scripts/jira/download_jira_images.py" '<attachments-json>'
 ```
-Returns `[{filename, description}]`. Silently returns `[]` if `GEMINI_API_KEY` is not set or no attachments. Include results as an **Images** section in the summary output.
+
+Returns `[{filename, mime_type, path}]`. Inspect each downloaded image path with the current agent/model's native image understanding; do **not** call an external vision API or require `GEMINI_API_KEY`.
+
+Use image findings only when they add useful context beyond the issue text, such as screenshots showing UI state, error messages, diagrams, affected screens, or expected behavior. Incorporate useful findings into **Summary** and **Key Points**, and add an **Images** section only when the image materially clarifies the requirement or bug. If images are decorative, duplicated, inaccessible, or not helpful, omit the section and continue.
 
 **J4 — Output summary as tree in terminal:**
 ```
@@ -179,6 +182,9 @@ Jira Summary
     │   └── <3-5 sentences>
     ├── Key Points
     │   ├── • <problem / scope / fix / blockers / decisions>
+    │   └── ...
+    ├── Images (optional, only if useful)
+    │   ├── • <filename>: <useful visual context, if any>
     │   └── ...
     └── Comment Highlights
         ├── • <highlight>
