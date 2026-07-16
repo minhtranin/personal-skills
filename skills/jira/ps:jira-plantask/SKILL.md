@@ -162,11 +162,15 @@ After each creation, show:
   URL: <jira-url>/browse/<KEY>
 ```
 
+Every created subtask must:
+- be **assigned to the current Jira user** (`JIRA_EMAIL` — the person running this plan)
+- be **transitioned to status "Selected for Development"** right after creation
+
 Use this Python script pattern to create each subtask:
 
 ```python
 python3 << 'PYEOF'
-import json, os, sys, urllib.request, base64
+import json, os, sys, urllib.request, urllib.parse, base64
 
 sys.path.insert(0, os.path.expanduser('~/.local/share/personal-skills/scripts/jira'))
 from jira_adf import text_to_adf
@@ -178,28 +182,47 @@ url   = os.environ.get('JIRA_URL', '').rstrip('/')
 if not all([email, token, url]):
     print('Missing JIRA env vars'); sys.exit(1)
 
-parent_key  = 'PARENT_KEY'
-summary     = 'SUBTASK_SUMMARY'
-description = 'DESCRIPTION_TEXT'
+parent_key    = 'PARENT_KEY'
+summary       = 'SUBTASK_SUMMARY'
+description   = 'DESCRIPTION_TEXT'
+target_status = 'Selected for Development'
 
 project  = parent_key.split('-')[0]
 auth     = base64.b64encode(f'{email}:{token}'.encode()).decode()
+headers  = {'Authorization': f'Basic {auth}', 'Content-Type': 'application/json'}
 
-payload = json.dumps({
-    'fields': {
-        'project':     {'key': project},
-        'summary':     summary,
-        'issuetype':   {'name': 'Sub-task'},
-        'parent':      {'key': parent_key},
-        'description': text_to_adf(description),
-    }
-}).encode()
+def api_get(path):
+    req = urllib.request.Request(f'{url}{path}', headers=headers)
+    return json.loads(urllib.request.urlopen(req).read().decode())
 
+def api_post(path, data):
+    req = urllib.request.Request(
+        f'{url}{path}', data=json.dumps(data).encode(), headers=headers, method='POST'
+    )
+    return urllib.request.urlopen(req)
+
+# Resolve the requester's accountId so the subtask can be self-assigned
+account_id = None
+try:
+    users = api_get(f'/rest/api/3/user/search?query={urllib.parse.quote(email)}')
+    if users:
+        account_id = users[0]['accountId']
+except Exception as e:
+    print(f'Warning: could not resolve accountId for {email}: {e}')
+
+fields = {
+    'project':     {'key': project},
+    'summary':     summary,
+    'issuetype':   {'name': 'Sub-task'},
+    'parent':      {'key': parent_key},
+    'description': text_to_adf(description),
+}
+if account_id:
+    fields['assignee'] = {'id': account_id}
+
+payload = json.dumps({'fields': fields}).encode()
 req = urllib.request.Request(
-    f'{url}/rest/api/3/issue',
-    data=payload,
-    headers={'Authorization': f'Basic {auth}', 'Content-Type': 'application/json'},
-    method='POST'
+    f'{url}/rest/api/3/issue', data=payload, headers=headers, method='POST'
 )
 
 try:
@@ -211,6 +234,22 @@ try:
 except urllib.error.HTTPError as e:
     print(f'Error {e.code}: {e.read().decode()}')
     sys.exit(1)
+
+# Move the new subtask to "Selected for Development"
+try:
+    transitions = api_get(f'/rest/api/3/issue/{key}/transitions')['transitions']
+    match = next(
+        (t for t in transitions if t['name'].strip().lower() == target_status.lower()),
+        None
+    )
+    if match:
+        api_post(f'/rest/api/3/issue/{key}/transitions', {'transition': {'id': match['id']}})
+        print(f'Status: {target_status}')
+    else:
+        names = ', '.join(t['name'] for t in transitions)
+        print(f'Warning: no transition named "{target_status}" available (options: {names})')
+except urllib.error.HTTPError as e:
+    print(f'Warning: transition failed {e.code}: {e.read().decode()}')
 PYEOF
 ```
 
@@ -365,3 +404,4 @@ After each subtask, run:
 - **HTTP 404:** issue key not found — ask user to verify
 - **Explore agent fails:** proceed with manual codebase description — ask user which files are involved
 - **Subtask creation fails:** show error, offer to retry with the same data
+- **No "Selected for Development" transition available:** the subtask is still created (just left at its default initial status) — show the warning with the available transition names and let the user transition it manually if needed
