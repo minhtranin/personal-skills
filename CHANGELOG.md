@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [VOXUANTHUAN-m15] - 2026-07-21
+
+### Changed
+- `ps:jira-plantask`: subtasks now auto-assigned to requester (`JIRA_EMAIL`) and transitioned to "Selected for Development" on creation
+
 ## [VOXUANTHUAN-m14] - 2026-07-02
 
 ### Removed

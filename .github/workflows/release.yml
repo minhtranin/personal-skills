@@ -1,57 +1,87 @@
-name: Release
+name: Auto Release on PR Merge
 
 on:
-  push:
-    tags:
-      - 'v*.*.*'
+  pull_request:
+    types: [closed]
+    branches: [main]
 
 jobs:
   release:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Verify VERSION file matches tag
+      - name: Compute next version
+        id: version
         run: |
-          FILE_VERSION=$(cat VERSION | tr -d '[:space:]')
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
-          if [ "$FILE_VERSION" != "$TAG_VERSION" ]; then
-            echo "ERROR: VERSION file ($FILE_VERSION) does not match tag ($TAG_VERSION)"
-            echo "Update the VERSION file before tagging."
-            exit 1
-          fi
+          CURRENT=$(cat VERSION | tr -d '[:space:]')
+          PREFIX=$(echo "$CURRENT" | sed 's/[0-9]*$//')
+          NUM=$(echo "$CURRENT" | grep -o '[0-9]*$')
+          NEXT="${PREFIX}$((NUM + 1))"
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          echo "next=$NEXT" >> $GITHUB_OUTPUT
+          echo "Bumping $CURRENT → $NEXT"
 
-      - name: Extract changelog
-        id: changelog
-        run: |
-          VERSION_NO_V="${GITHUB_REF_NAME#v}"
-          # Try [Unreleased] first, then fall back to matching version
-          NOTES=$(awk '/^## \[Unreleased\]/{found=1; next} found && /^## /{exit} found{print}' CHANGELOG.md)
-          if [ -z "$NOTES" ]; then
-            NOTES=$(awk "/^## \[${VERSION_NO_V}\]/{found=1; next} found && /^## /{exit} found{print}" CHANGELOG.md)
-          fi
-          if [ -z "$NOTES" ]; then
-            NOTES="See CHANGELOG.md for details."
-          fi
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          echo "$NOTES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Drop existing release if any
+      - name: Update VERSION and CHANGELOG
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT: ${{ steps.version.outputs.next }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          gh release delete ${{ github.ref_name }} --yes --cleanup-tag 2>/dev/null || true
+          echo "$NEXT" > VERSION
+
+          TODAY=$(date +%Y-%m-%d)
+          python3 - <<PYEOF
+          import os, re
+
+          changelog = open('CHANGELOG.md').read()
+          version   = os.environ['NEXT']
+          title     = os.environ['PR_TITLE']
+          pr_num    = os.environ['PR_NUMBER']
+          today     = '${TODAY}'
+
+          entry = (
+              f'## [{version}] - {today}\n\n'
+              f'### Changed\n'
+              f'- PR #{pr_num}: {title}\n\n'
+          )
+
+          # Insert right after the [Unreleased] header line
+          changelog = re.sub(
+              r'(## \[Unreleased\]\n)',
+              r'\1\n' + entry,
+              changelog,
+              count=1,
+          )
+          open('CHANGELOG.md', 'w').write(changelog)
+          PYEOF
+
+      - name: Commit, tag, push
+        env:
+          NEXT: ${{ steps.version.outputs.next }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION CHANGELOG.md
+          git commit -m "Release $NEXT"
+          git tag "$NEXT"
+          git push origin main "$NEXT"
 
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RELEASE_NOTES: ${{ steps.changelog.outputs.notes }}
+          NEXT: ${{ steps.version.outputs.next }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
-          echo "$RELEASE_NOTES" > /tmp/release-notes.md
-          gh release create ${{ github.ref_name }} \
-            --title "personal-skills ${{ github.ref_name }}" \
-            --notes-file /tmp/release-notes.md
+          gh release create "$NEXT" \
+            --title "$NEXT" \
+            --latest \
+            --notes "PR #${PR_NUMBER}: ${PR_TITLE}"
