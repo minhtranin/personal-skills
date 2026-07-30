@@ -159,7 +159,13 @@ Wait for input.
 
 ## Step 6 — On "c" (create all tasks as subtasks)
 
-For each task in the plan:
+**First, preview every subtask's full description before creating anything.** Render
+each task as its final Jira body — the **two sections only** (Acceptance Criteria +
+Where to Test, per the template below) — and show them all to the user. The
+description is what they are approving, not just the title; do not create until
+they confirm the rendered bodies. Let them tweak any bullet first.
+
+Then, for each task in the plan:
 
 ```
 Create subtask: "[BE]: <title>"? (y / n / s=skip all remaining)

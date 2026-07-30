@@ -7,6 +7,11 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [VOXUANTHUAN-m17] - 2026-07-30
+
+### Changed
+- `ps:jira-plantask`: before creating subtasks, preview each subtask's full rendered description (Acceptance Criteria + Where to Test) and get confirmation first — the description is what's approved, not just the title
+
 ## [VOXUANTHUAN-m16] - 2026-07-30
 
 ### Changed
