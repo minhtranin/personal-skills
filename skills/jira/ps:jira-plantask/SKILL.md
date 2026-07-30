@@ -100,16 +100,12 @@ ACCEPTANCE CRITERIA
 IMPLEMENTATION TASKS
 ════════════════════════════════════════════════════════
 
-Each task is independent and can be implemented and reviewed separately.
-
-[T1] <Task title>
+[BE]: <what this task delivers>
      Scope   : <what this task covers>
      Files   : <file paths>
      Approach: <how to implement, following existing patterns>
-     AC      : <acceptance criteria specific to this task>
-     Test    : <where/how to verify — component, page, API endpoint, etc.>
 
-[T2] <Task title>
+[FE]: <what this task delivers>
      ...
 
 ════════════════════════════════════════════════════════
@@ -119,13 +115,30 @@ QUICK TEST AREAS (end-to-end)
 - ...
 ```
 
-**Task design rules:**
-- Each task must be independently implementable (no circular dependencies between tasks)
-- **No file overlap** — each file must be owned by exactly one task to avoid merge conflicts
-- Tasks should be ordered so earlier tasks don't block later ones
-- Prefer small, focused tasks (1–3 files each) over large catch-all tasks
-- Follow the conventions and patterns found in Step 3 exactly — no new abstractions unless required
-- Include Acceptance Criteria and Where to Test in every task description
+**Task design rules — split by layer, not by file:**
+
+Every task title starts with its layer tag: **`[BE]:`** or **`[FE]:`**. Use those two by default — that is the split.
+
+Rules:
+- **Default to 2 subtasks: one `[BE]`, one `[FE]`.** If the issue only touches one side, that's **1 subtask**.
+- **Never split within a layer.** All FE work for this issue is one `[FE]` task, even across many components, hooks, and files. Same for `[BE]`.
+- **Small cross-layer work stays in one task.** If the change touches both sides but is a few lines each, make it one task under whichever layer dominates.
+- **Exception — big shared piece gets its own task.** If a **large common/shared component** or a **large handler/worker** is substantial on its own (heavy logic, reused by multiple call sites, reviewable independently), give it a separate task tagged by its layer, e.g. `[BE]: <handler name>` or `[FE]: <shared component name>`.
+- **Cap: 4 subtasks.** More than that means the split is too fine — merge back.
+- **No file overlap** between tasks — each file owned by exactly one task, so PRs don't conflict.
+- Order tasks so earlier ones don't block later ones (BE before FE).
+- Follow the conventions and patterns found in Step 3 exactly — no new abstractions unless required.
+
+**Anti-pattern (too granular):**
+```
+[T1] Add type definitions
+[T2] Add API endpoint
+[T3] Add service method
+[T4] Wire up hook
+[T5] Update component
+[T6] Add tests
+```
+→ Should be: `[BE]: <endpoint + service + types>` · `[FE]: <hook + component>`
 
 ---
 
@@ -149,8 +162,10 @@ Wait for input.
 For each task in the plan:
 
 ```
-Create subtask: "[T1] <title>"? (y / n / s=skip all remaining)
+Create subtask: "[BE]: <title>"? (y / n / s=skip all remaining)
 ```
+
+The subtask summary in Jira **must keep the layer tag** — `[BE]: <title>` / `[FE]: <title>`.
 
 On `y`, create the subtask in Jira using the Python script below.
 On `n`, skip this one and continue.
@@ -253,19 +268,9 @@ except urllib.error.HTTPError as e:
 PYEOF
 ```
 
-For each subtask, build the description from the task plan using this template:
+For each subtask, build the description from the task plan using this template — **these two sections only**:
 
 ```
-## Goal
-<2–3 sentences connecting this subtask to the parent issue's context and why it matters>
-
-## Changes
-
-| Area | Change | Impact |
-|------|--------|--------|
-| **<Area 1>** | <what to change> | <expected result> |
-| **<Area 2>** | <what to change> | <expected result> |
-
 ## Acceptance Criteria
 - <criterion 1>
 - <criterion 2>
@@ -276,24 +281,23 @@ For each subtask, build the description from the task plan using this template:
 ```
 
 **Description rules:**
+- **Nothing beyond these two sections.** No Goal, no Changes table, no context, no approach, no file lists — the parent issue already holds that.
 - No file paths or line numbers (they change; use the component/hook name instead)
-- Use the **Changes table** to summarize scope — one row per logical area, bold the Area column
-- Goal section: brief context from parent — don't repeat the full parent description
-- Acceptance Criteria must be concrete and testable
+- Acceptance Criteria: concrete and testable, 2–5 bullets
 - Where to Test: concrete actions with expected results (page URL, user action, API endpoint)
+- Keep it short — if a bullet needs a paragraph, it belongs in the parent issue, not here
 
 ---
 
 ## Step 7 — On "s" (single custom subtask)
 
 Ask:
-1. Subtask title/summary (required)
-2. Goal — brief context (optional — will auto-fill from parent if skipped)
-3. Changes — enter each as `Area | Change | Impact` (optional — one per line, empty to skip)
-4. Acceptance Criteria (optional — Enter to skip)
-5. Where to Test (optional — Enter to skip)
+1. Layer — `BE` or `FE` (required — becomes the `[BE]:` / `[FE]:` title prefix)
+2. Subtask title/summary (required)
+3. Acceptance Criteria (optional — Enter to skip)
+4. Where to Test (optional — Enter to skip)
 
-Build the description using the same template as Step 6 (Goal + Changes table + AC + Where to Test). Show a confirmation summary, then on `y` create via the same Python script as Step 6.
+Build the description using the same template as Step 6 (**Acceptance Criteria + Where to Test only**). Show a confirmation summary, then on `y` create via the same Python script as Step 6.
 
 ---
 
@@ -332,7 +336,7 @@ print(json.dumps(data['fields'].get('description', {}), indent=2))
 PYEOF
 ```
 
-Ask what to change, draft the new description using the same template format (Goal + Changes table + AC + Where to Test), show it for confirmation, then update on `y`:
+Ask what to change, draft the new description using the same template format (**Acceptance Criteria + Where to Test only**), show it for confirmation, then update on `y`:
 
 ```python
 python3 << 'PYEOF'

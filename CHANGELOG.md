@@ -7,6 +7,14 @@ and this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [VOXUANTHUAN-m16] - 2026-07-30
+
+### Changed
+- `ps:jira-plantask`: subtasks now split by layer — titles are `[BE]: <title>` / `[FE]: <title>`, default 2 subtasks (1 if single-sided), never split within a layer, hard cap of 4
+- `ps:jira-plantask`: big shared component or big handler may get its own layer-tagged task
+- `ps:jira-plantask`: subtask description stripped to **Acceptance Criteria + Where to Test** only — dropped Goal section and Changes table
+- `ps:jira-plantask`: custom-subtask prompt trimmed to Layer, title, AC, Where to Test
+
 ## [VOXUANTHUAN-m15] - 2026-07-21
 
 ### Changed
